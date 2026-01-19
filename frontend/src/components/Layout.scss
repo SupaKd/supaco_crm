@@ -1,0 +1,149 @@
+@import '../styles/variables';
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+
+  @media (max-width: $mobile) {
+    flex-direction: column;
+  }
+}
+
+.sidebar {
+  width: $sidebar-width;
+  background-color: $card-bg;
+  border-right: 1px solid $border-color;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  @media (max-width: $mobile) {
+    width: 100%;
+    height: $sidebar-mobile-height;
+    position: fixed;
+    bottom: 0;
+    top: auto;
+    left: 0;
+    right: 0;
+    border-right: none;
+    border-top: 1px solid $border-color;
+    flex-direction: row;
+    z-index: 100;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.sidebar-header {
+  padding: 24px 20px;
+  border-bottom: 1px solid $border-color;
+
+  @media (max-width: $mobile) {
+    display: none;
+  }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: $primary-color;
+    margin-bottom: 8px;
+  }
+
+  .user-name {
+    font-size: 14px;
+    color: $text-secondary;
+  }
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  @media (max-width: $mobile) {
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0;
+    gap: 0;
+    width: 100%;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: $text-secondary;
+    font-weight: 500;
+    transition: $transition;
+    background: none;
+    width: 100%;
+    text-align: left;
+
+    @media (max-width: $mobile) {
+      flex-direction: column;
+      gap: 4px;
+      padding: 12px 8px;
+      border-radius: 0;
+      font-size: 12px;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .icon {
+      font-size: 20px;
+
+      @media (max-width: $mobile) {
+        font-size: 24px;
+      }
+    }
+
+    .text {
+      @media (max-width: $mobile) {
+        font-size: 11px;
+      }
+    }
+
+    &:hover {
+      background-color: $bg-color;
+      color: $primary-color;
+    }
+
+    &.active {
+      background-color: rgba(79, 70, 229, 0.1);
+      color: $primary-color;
+    }
+  }
+
+  .logout-btn {
+    margin-top: auto;
+
+    @media (max-width: $mobile) {
+      margin-top: 0;
+    }
+
+    &:hover {
+      background-color: rgba(239, 68, 68, 0.1);
+      color: $danger-color;
+    }
+  }
+}
+
+.main-content {
+  flex: 1;
+  margin-left: $sidebar-width;
+  padding: 24px;
+  min-height: 100vh;
+
+  @media (max-width: $mobile) {
+    margin-left: 0;
+    margin-bottom: $sidebar-mobile-height;
+    padding: 16px;
+  }
+}

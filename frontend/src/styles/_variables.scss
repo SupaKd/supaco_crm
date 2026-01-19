@@ -1,0 +1,39 @@
+// 🎯 Couleur principale (branding)
+$primary-color: #c1121f;        // rouge japonais profond
+$primary-hover: #9b0d17;
+
+// 🎨 Couleur secondaire
+$secondary-color: #1f2937;      // noir anthracite
+
+// ✅ États
+$success-color: #2f855a;        // vert wasabi doux
+$warning-color: #f59e0b;        // yuzu / orange
+$danger-color: #b91c1c;         // rouge alerte
+
+// 🧱 Backgrounds
+$bg-color: #f9fafb;             // ivoire très clair
+$card-bg: #ffffff;
+
+// ✍️ Textes
+$text-primary: #111827;         // presque noir
+$text-secondary: #6b7280;
+
+// 📦 Bordures
+$border-color: #e5e7eb;
+
+
+// Breakpoints
+$mobile: 768px;
+$tablet: 1024px;
+
+// Sidebar
+$sidebar-width: 260px;
+$sidebar-mobile-height: 70px;
+
+// Transitions
+$transition: all 0.3s ease;
+
+// Shadows
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);

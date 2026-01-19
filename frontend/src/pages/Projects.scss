@@ -1,0 +1,166 @@
+@import '../styles/variables';
+
+.projects-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+
+  @media (max-width: $mobile) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  p {
+    color: $text-secondary;
+    font-size: 14px;
+  }
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: white;
+  padding: 12px 16px;
+  border: 1px solid $border-color;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  transition: $transition;
+
+  &:focus-within {
+    border-color: $primary-color;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  svg {
+    color: $text-secondary;
+    flex-shrink: 0;
+  }
+
+  input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: $text-primary;
+    background: transparent;
+
+    &::placeholder {
+      color: $text-secondary;
+    }
+  }
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+
+  .filter-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background-color: $card-bg;
+    border: 1px solid $border-color;
+    color: $text-secondary;
+    font-size: 14px;
+    font-weight: 500;
+    transition: $transition;
+
+    &:hover {
+      border-color: $primary-color;
+      color: $primary-color;
+    }
+
+    &.active {
+      background-color: $primary-color;
+      border-color: $primary-color;
+      color: white;
+    }
+  }
+}
+
+.projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.project-item {
+  background-color: $card-bg;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid $border-color;
+  transition: $transition;
+  cursor: pointer;
+
+  @media (max-width: $mobile) {
+    padding: 16px;
+  }
+
+  &:hover {
+    box-shadow: $shadow-md;
+    border-color: $primary-color;
+  }
+
+  .project-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 16px;
+
+    @media (max-width: $mobile) {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .project-info {
+      flex: 1;
+
+      h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: $text-primary;
+        margin-bottom: 6px;
+
+        @media (max-width: $mobile) {
+          font-size: 16px;
+        }
+      }
+
+      .client-name {
+        font-size: 14px;
+        color: $text-secondary;
+      }
+    }
+  }
+
+  .project-details {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+
+    @media (max-width: $mobile) {
+      gap: 12px;
+    }
+
+    .detail-item {
+      font-size: 13px;
+      color: $text-secondary;
+    }
+  }
+}
