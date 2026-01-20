@@ -10,6 +10,7 @@ import Projects from './pages/Projects';
 import NewProject from './pages/NewProject';
 import ProjectDetails from './pages/ProjectDetails';
 import Analytics from './pages/Analytics';
+import CalendarPage from './pages/CalendarPage';
 import './styles/global.scss';
 
 function App() {
@@ -59,6 +60,14 @@ function App() {
               <PrivateRoute>
                 <Layout>
                   <Analytics />
+                </Layout>
+              </PrivateRoute>
+            } />
+
+            <Route path="/calendar" element={
+              <PrivateRoute>
+                <Layout>
+                  <CalendarPage />
                 </Layout>
               </PrivateRoute>
             } />

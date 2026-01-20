@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, Folder, BarChart3, LogOut } from 'lucide-react';
+import { LayoutDashboard, Folder, BarChart3, Calendar, LogOut } from 'lucide-react';
 import './Layout.scss';
 
 const Layout = ({ children }) => {
@@ -29,6 +29,10 @@ const Layout = ({ children }) => {
           <NavLink to="/projects" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
             <span className="icon"><Folder size={20} /></span>
             <span className="text">Projets</span>
+          </NavLink>
+          <NavLink to="/calendar" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+            <span className="icon"><Calendar size={20} /></span>
+            <span className="text">Calendrier</span>
           </NavLink>
           <NavLink to="/analytics" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
             <span className="icon"><BarChart3 size={20} /></span>

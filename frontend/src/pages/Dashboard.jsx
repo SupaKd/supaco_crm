@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { projectsAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import Loader from '../components/Loader';
-import { BarChart3, FileText, Settings, CheckCircle2, User, DollarSign, Calendar, Plus } from 'lucide-react';
+import { StatusPieChart } from '../components/Charts';
+import { BarChart3, FileText, Settings, CheckCircle2, User, DollarSign, Calendar, Plus, ArrowRight } from 'lucide-react';
 import './Dashboard.scss';
 
 const Dashboard = () => {
@@ -101,6 +102,23 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Quick Stats Chart */}
+      {projects.length > 0 && (
+        <div className="quick-stats-section">
+          <div className="quick-chart">
+            <h3>Répartition des projets</h3>
+            <StatusPieChart data={stats} />
+          </div>
+          <div className="analytics-cta">
+            <h3>Analyses détaillées</h3>
+            <p>Accédez à des statistiques avancées, graphiques et insights sur vos projets.</p>
+            <Link to="/analytics" className="btn btn-secondary">
+              Voir les statistiques <ArrowRight size={18} />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Recent Projects */}
       <div className="recent-projects">
