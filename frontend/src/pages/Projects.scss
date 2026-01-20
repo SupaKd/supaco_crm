@@ -21,10 +21,11 @@
     font-size: 28px;
     font-weight: 700;
     margin-bottom: 4px;
+    color: var(--text-primary);
   }
 
   p {
-    color: $text-secondary;
+    color: var(--text-secondary);
     font-size: 14px;
   }
 }
@@ -33,20 +34,21 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background-color: white;
+  background-color: var(--card-bg);
   padding: 12px 16px;
-  border: 1px solid $border-color;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   margin-bottom: 24px;
   transition: $transition;
 
   &:focus-within {
     border-color: $primary-color;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    // Utilisation de la couleur primaire pour l'ombre de focus
+    box-shadow: 0 0 0 3px rgba($primary-color, 0.15);
   }
 
   svg {
-    color: $text-secondary;
+    color: var(--text-secondary);
     flex-shrink: 0;
   }
 
@@ -55,11 +57,11 @@
     border: none;
     outline: none;
     font-size: 14px;
-    color: $text-primary;
+    color: var(--text-primary);
     background: transparent;
 
     &::placeholder {
-      color: $text-secondary;
+      color: var(--text-secondary);
     }
   }
 }
@@ -67,28 +69,100 @@
 .filters {
   display: flex;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
 
   .filter-btn {
     padding: 8px 16px;
     border-radius: 20px;
-    background-color: $card-bg;
-    border: 1px solid $border-color;
-    color: $text-secondary;
+    background-color: var(--bg-elevated); // Plus visible sur le fond en dark mode
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
     font-size: 14px;
     font-weight: 500;
     transition: $transition;
+    cursor: pointer;
 
     &:hover {
       border-color: $primary-color;
       color: $primary-color;
+      background-color: var(--hover-bg);
     }
 
     &.active {
       background-color: $primary-color;
       border-color: $primary-color;
       color: white;
+    }
+  }
+}
+
+.tag-filters {
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  padding: 16px;
+  margin-bottom: 24px;
+  transition: $transition;
+
+  .tag-filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+
+    .tag-filters-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .clear-tags-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: none;
+      // Adaptation pour le Dark Mode (opacité plus forte pour lisibilité)
+      background-color: rgba($danger-color, 0.15);
+      color: $danger-color;
+      font-size: 12px;
+      cursor: pointer;
+      transition: $transition;
+
+      &:hover {
+        background-color: rgba($danger-color, 0.25);
+      }
+    }
+  }
+
+  .tag-filters-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .tag-filter-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 2px solid;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      background-color: transparent;
+      transition: $transition;
+
+      &:hover {
+        opacity: 0.8;
+        transform: translateY(-1px);
+      }
+
+      &.active {
+        box-shadow: var(--shadow-sm);
+      }
     }
   }
 }
@@ -100,10 +174,10 @@
 }
 
 .project-item {
-  background-color: $card-bg;
+  background-color: var(--card-bg);
   border-radius: 12px;
   padding: 20px;
-  border: 1px solid $border-color;
+  border: 1px solid var(--border-color);
   transition: $transition;
   cursor: pointer;
 
@@ -112,8 +186,9 @@
   }
 
   &:hover {
-    box-shadow: $shadow-md;
+    box-shadow: var(--shadow-md);
     border-color: $primary-color;
+    background-color: var(--bg-elevated); // Léger soulèvement au survol
   }
 
   .project-main {
@@ -134,7 +209,7 @@
       h3 {
         font-size: 18px;
         font-weight: 600;
-        color: $text-primary;
+        color: var(--text-primary);
         margin-bottom: 6px;
 
         @media (max-width: $mobile) {
@@ -144,8 +219,25 @@
 
       .client-name {
         font-size: 14px;
-        color: $text-secondary;
+        color: var(--text-secondary);
       }
+    }
+  }
+
+  .project-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+
+    .project-tag {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+      color: white;
+      // Ajout d'une légère bordure en dark mode pour que les tags foncés ne disparaissent pas
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
   }
 
@@ -160,7 +252,10 @@
 
     .detail-item {
       font-size: 13px;
-      color: $text-secondary;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
   }
 }

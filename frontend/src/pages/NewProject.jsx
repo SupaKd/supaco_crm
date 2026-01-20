@@ -15,6 +15,7 @@ const NewProject = () => {
     client_name: '',
     client_email: '',
     client_phone: '',
+    website_url: '',
     description: '',
     budget: '',
     status: 'devis',
@@ -42,6 +43,7 @@ const NewProject = () => {
         deadline: formData.deadline || null,
         client_email: formData.client_email || null,
         client_phone: formData.client_phone || null,
+        website_url: formData.website_url || null,
         description: formData.description || null
       };
 
@@ -190,6 +192,18 @@ const NewProject = () => {
                 placeholder="06 12 34 56 78"
               />
             </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="website_url">URL du site web</label>
+            <input
+              type="url"
+              id="website_url"
+              name="website_url"
+              value={formData.website_url}
+              onChange={handleChange}
+              placeholder="https://www.example.com"
+            />
           </div>
         </div>
 

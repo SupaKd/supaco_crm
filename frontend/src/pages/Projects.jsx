@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { projectsAPI } from '../services/api';
 import Loader from '../components/Loader';
-import { Plus, User, DollarSign, Calendar, Clock, Search } from 'lucide-react';
+import { Plus, User, DollarSign, Calendar, Clock, Search, Tag, X } from 'lucide-react';
 import './Projects.scss';
 
 const Projects = () => {
@@ -10,6 +10,7 @@ const Projects = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTags, setSelectedTags] = useState([]);
 
   useEffect(() => {
     fetchProjects();
@@ -26,6 +27,33 @@ const Projects = () => {
     }
   };
 
+  // Extraire tous les tags uniques des projets
+  const allTags = useMemo(() => {
+    const tagsMap = new Map();
+    projects.forEach(p => {
+      if (p.tags) {
+        p.tags.forEach(tag => {
+          if (!tagsMap.has(tag.id)) {
+            tagsMap.set(tag.id, tag);
+          }
+        });
+      }
+    });
+    return Array.from(tagsMap.values());
+  }, [projects]);
+
+  const toggleTagFilter = (tagId) => {
+    setSelectedTags(prev =>
+      prev.includes(tagId)
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    );
+  };
+
+  const clearTagFilters = () => {
+    setSelectedTags([]);
+  };
+
   const filteredProjects = projects
     .filter(p => filter === 'all' || p.status === filter)
     .filter(p => {
@@ -36,7 +64,13 @@ const Projects = () => {
         p.client_name.toLowerCase().includes(query) ||
         (p.description && p.description.toLowerCase().includes(query))
       );
-    });
+    })
+    .filter(p => {
+      if (selectedTags.length === 0) return true;
+      if (!p.tags || p.tags.length === 0) return false;
+      return selectedTags.every(tagId => p.tags.some(t => t.id === tagId));
+    })
+    .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
   if (loading) {
     return <Loader fullScreen />;
@@ -65,7 +99,7 @@ const Projects = () => {
         />
       </div>
 
-      {/* Filtres */}
+      {/* Filtres par statut */}
       <div className="filters">
         <button
           className={filter === 'all' ? 'filter-btn active' : 'filter-btn'}
@@ -92,6 +126,39 @@ const Projects = () => {
           Terminés ({projects.filter(p => p.status === 'termine').length})
         </button>
       </div>
+
+      {/* Filtres par tags */}
+      {allTags.length > 0 && (
+        <div className="tag-filters">
+          <div className="tag-filters-header">
+            <span className="tag-filters-label">
+              <Tag size={16} /> Filtrer par tags :
+            </span>
+            {selectedTags.length > 0 && (
+              <button className="clear-tags-btn" onClick={clearTagFilters}>
+                <X size={14} /> Effacer
+              </button>
+            )}
+          </div>
+          <div className="tag-filters-list">
+            {allTags.map(tag => (
+              <button
+                key={tag.id}
+                className={`tag-filter-btn ${selectedTags.includes(tag.id) ? 'active' : ''}`}
+                style={{
+                  '--tag-color': tag.color,
+                  backgroundColor: selectedTags.includes(tag.id) ? tag.color : 'transparent',
+                  borderColor: tag.color,
+                  color: selectedTags.includes(tag.id) ? 'white' : tag.color
+                }}
+                onClick={() => toggleTagFilter(tag.id)}
+              >
+                {tag.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Liste des projets */}
       {filteredProjects.length === 0 ? (
@@ -127,6 +194,21 @@ const Projects = () => {
                 </span>
               </div>
               
+              {/* Tags du projet */}
+              {project.tags && project.tags.length > 0 && (
+                <div className="project-tags">
+                  {project.tags.map(tag => (
+                    <span
+                      key={tag.id}
+                      className="project-tag"
+                      style={{ backgroundColor: tag.color }}
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               <div className="project-details">
                 {project.budget && (
                   <span className="detail-item">

@@ -1,10 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, Folder, BarChart3, Calendar, LogOut } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
+import { LayoutDashboard, Folder, BarChart3, Calendar, LogOut, Sun, Moon } from 'lucide-react';
 import './Layout.scss';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
+  const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -17,7 +19,16 @@ const Layout = ({ children }) => {
       {/* Sidebar Desktop / Bottom Nav Mobile */}
       <aside className="sidebar">
         <div className="sidebar-header">
-          <h2>Project Manager</h2>
+          <div className="sidebar-header-top">
+            <h2>Project Manager</h2>
+            <button
+              onClick={toggleTheme}
+              className="theme-toggle"
+              title={isDarkMode ? 'Mode clair' : 'Mode sombre'}
+            >
+              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+          </div>
           <p className="user-name">{user?.name}</p>
         </div>
 
@@ -38,6 +49,13 @@ const Layout = ({ children }) => {
             <span className="icon"><BarChart3 size={20} /></span>
             <span className="text">Statistiques</span>
           </NavLink>
+
+          {/* Theme toggle for mobile */}
+          <button onClick={toggleTheme} className="nav-link theme-toggle-mobile">
+            <span className="icon">{isDarkMode ? <Sun size={20} /> : <Moon size={20} />}</span>
+            <span className="text">{isDarkMode ? 'Clair' : 'Sombre'}</span>
+          </button>
+
           <button onClick={handleLogout} className="nav-link logout-btn">
             <span className="icon"><LogOut size={20} /></span>
             <span className="text">Déconnexion</span>

@@ -7,6 +7,7 @@ const projectRoutes = require('./routes/projects');
 const taskRoutes = require('./routes/tasks');
 const noteRoutes = require('./routes/notes');
 const tagRoutes = require('./routes/tags');
+const quicknoteRoutes = require('./routes/quicknotes');
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/tags', tagRoutes);
+app.use('/api/quicknotes', quicknoteRoutes);
 
 // Route de test
 app.get('/', (req, res) => {

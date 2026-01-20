@@ -1,6 +1,9 @@
+@import '../styles/variables';
+
 .new-project-page {
   max-width: 900px;
   margin: 0 auto;
+  color: var(--text-primary);
 
   .page-header {
     margin-bottom: 2rem;
@@ -11,7 +14,7 @@
     h1 {
       margin: 0;
       font-size: 1.75rem;
-      color: #1f2937;
+      color: var(--text-primary);
     }
 
     .back-btn {
@@ -19,25 +22,25 @@
       align-items: center;
       gap: 0.5rem;
       padding: 0.5rem 1rem;
-      background: white;
-      border: 1px solid #e5e7eb;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
       border-radius: 8px;
-      color: #6b7280;
+      color: var(--text-secondary);
       font-size: 0.875rem;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: $transition;
 
       &:hover {
-        background: #f9fafb;
-        border-color: #d1d5db;
+        background: var(--hover-bg);
+        color: var(--text-primary);
       }
     }
   }
 
   .error-message {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #dc2626;
+    background: rgba($danger-color, 0.1);
+    border: 1px solid rgba($danger-color, 0.2);
+    color: $danger-color;
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
@@ -45,10 +48,11 @@
   }
 
   .project-form {
-    background: white;
+    background: var(--card-bg);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
     padding: 2rem;
+    border: 1px solid var(--border-color);
 
     .form-section {
       margin-bottom: 2.5rem;
@@ -59,10 +63,10 @@
 
       h2 {
         font-size: 1.25rem;
-        color: #1f2937;
+        color: var(--text-primary);
         margin: 0 0 1.5rem 0;
         padding-bottom: 0.75rem;
-        border-bottom: 2px solid #f3f4f6;
+        border-bottom: 2px solid var(--border-color);
       }
     }
 
@@ -73,11 +77,11 @@
         display: block;
         font-size: 0.875rem;
         font-weight: 500;
-        color: #374151;
+        color: var(--text-primary);
         margin-bottom: 0.5rem;
 
         .required {
-          color: #ef4444;
+          color: $danger-color;
         }
       }
 
@@ -86,20 +90,23 @@
       textarea {
         width: 100%;
         padding: 0.75rem;
-        border: 1px solid #d1d5db;
+        border: 1px solid var(--border-color);
         border-radius: 8px;
         font-size: 0.875rem;
         font-family: inherit;
-        transition: all 0.2s;
+        background-color: var(--input-bg);
+        color: var(--text-primary);
+        transition: $transition;
 
         &:focus {
           outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          border-color: $primary-color;
+          box-shadow: 0 0 0 3px rgba($primary-color, 0.15);
         }
 
         &::placeholder {
-          color: #9ca3af;
+          color: var(--text-secondary);
+          opacity: 0.6;
         }
       }
 
@@ -110,7 +117,11 @@
 
       select {
         cursor: pointer;
-        background: white;
+        // Pour éviter le fond blanc natif sur certains navigateurs en Dark Mode
+        option {
+          background-color: var(--bg-elevated);
+          color: var(--text-primary);
+        }
       }
     }
 
@@ -125,7 +136,7 @@
       justify-content: flex-end;
       gap: 1rem;
       padding-top: 1.5rem;
-      border-top: 1px solid #e5e7eb;
+      border-top: 1px solid var(--border-color);
 
       .btn {
         display: flex;
@@ -136,7 +147,7 @@
         font-size: 0.875rem;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: $transition;
         border: none;
 
         &:disabled {
@@ -145,22 +156,22 @@
         }
 
         &.btn-primary {
-          background: #3b82f6;
+          background: $primary-color;
           color: white;
 
           &:hover:not(:disabled) {
-            background: #2563eb;
+            background: $primary-hover;
           }
         }
 
         &.btn-secondary {
-          background: white;
-          color: #6b7280;
-          border: 1px solid #d1d5db;
+          background: var(--bg-elevated);
+          color: var(--text-secondary);
+          border: 1px solid var(--border-color);
 
           &:hover:not(:disabled) {
-            background: #f9fafb;
-            border-color: #9ca3af;
+            background: var(--hover-bg);
+            color: var(--text-primary);
           }
         }
       }
@@ -169,7 +180,7 @@
 }
 
 // Responsive
-@media (max-width: 768px) {
+@media (max-width: $mobile) {
   .new-project-page {
     .page-header {
       flex-direction: column;

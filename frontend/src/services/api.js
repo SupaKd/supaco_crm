@@ -78,4 +78,13 @@ export const tagsAPI = {
   removeFromProject: (projectId, tagId) => api.delete(`/tags/project/${projectId}/tag/${tagId}`)
 };
 
+// Quick Notes
+export const quicknotesAPI = {
+  getAll: () => api.get('/quicknotes'),
+  create: (data) => api.post('/quicknotes', data),
+  update: (id, data) => api.put(`/quicknotes/${id}`, data),
+  togglePin: (id) => api.patch(`/quicknotes/${id}/pin`),
+  delete: (id) => api.delete(`/quicknotes/${id}`)
+};
+
 export default api;

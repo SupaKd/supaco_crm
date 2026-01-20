@@ -1,26 +1,25 @@
-// 🎯 Couleur principale (branding)
-$primary-color: #c1121f;        // rouge japonais profond
-$primary-hover: #9b0d17;
+// 🎯 Couleur principale (Branding moderne - Indigo vibrant)
+$primary-color: #0077b6;        // Indigo moderne (type Tailwind/Stripe)
+$primary-hover: #0096c7;
 
-// 🎨 Couleur secondaire
-$secondary-color: #1f2937;      // noir anthracite
+// 🎨 Couleur secondaire (Neutral Slate)
+$secondary-color: #334155;      // Gris ardoise pro pour la navigation
 
-// ✅ États
-$success-color: #2f855a;        // vert wasabi doux
-$warning-color: #f59e0b;        // yuzu / orange
-$danger-color: #b91c1c;         // rouge alerte
+// ✅ États (Couleurs plus saturées et accessibles)
+$success-color: #10b981;        // Émeraude pur
+$warning-color: #f59e0b;        // Ambre pour l'attention
+$danger-color: #ef4444;         // Rouge vif moderne
 
-// 🧱 Backgrounds
-$bg-color: #f9fafb;             // ivoire très clair
+// 🧱 Backgrounds - Light Mode (Look épuré)
+$bg-color: #f8fafc;             // Blanc bleuté très léger (réduit l'éblouissement)
 $card-bg: #ffffff;
 
-// ✍️ Textes
-$text-primary: #111827;         // presque noir
-$text-secondary: #6b7280;
+// ✍️ Textes - Light Mode
+$text-primary: #0f172a;         // Ardoise foncée (meilleure lisibilité que le noir pur)
+$text-secondary: #64748b;       // Gris bleuté pour les sous-titres
 
-// 📦 Bordures
-$border-color: #e5e7eb;
-
+// 📦 Bordures - Light Mode
+$border-color: #f1f5f9;         // Bordure ultra-légère pour un look sans bord
 
 // Breakpoints
 $mobile: 768px;
@@ -37,3 +36,62 @@ $transition: all 0.3s ease;
 $shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 $shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 $shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+// ============================================
+// 🌙 DARK MODE - Style Google
+// ============================================
+
+// CSS Custom Properties pour le theming dynamique
+:root {
+  // Light mode (default)
+  --bg-color: #f9fafb;
+  --bg-elevated: #ffffff;
+  --card-bg: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
+  --hover-bg: #f3f4f6;
+  --input-bg: #ffffff;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+  // Badges light mode
+  --badge-devis-bg: #fef3c7;
+  --badge-devis-text: #92400e;
+  --badge-en-cours-bg: #dbeafe;
+  --badge-en-cours-text: #1e40af;
+  --badge-termine-bg: #d1fae5;
+  --badge-termine-text: #065f46;
+  --badge-annule-bg: #fee2e2;
+  --badge-annule-text: #991b1b;
+  --badge-a-faire-bg: #f3f4f6;
+  --badge-a-faire-text: #374151;
+}
+
+[data-theme="dark"] {
+  // Google Dark Mode Colors
+  --bg-color: #202124;           // Fond principal Google
+  --bg-elevated: #292a2d;        // Surface légèrement élevée
+  --card-bg: #292a2d;            // Cartes
+  --text-primary: #e8eaed;       // Texte principal
+  --text-secondary: #9aa0a6;     // Texte secondaire
+  --border-color: #3c4043;       // Bordures
+  --hover-bg: #35363a;           // Hover
+  --input-bg: #303134;           // Inputs
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 20px -3px rgba(0, 0, 0, 0.5);
+
+  // Badges dark mode (plus doux)
+  --badge-devis-bg: #4d3c00;
+  --badge-devis-text: #fcd34d;
+  --badge-en-cours-bg: #1e3a5f;
+  --badge-en-cours-text: #93c5fd;
+  --badge-termine-bg: #134e4a;
+  --badge-termine-text: #6ee7b7;
+  --badge-annule-bg: #4c1d1d;
+  --badge-annule-text: #fca5a5;
+  --badge-a-faire-bg: #374151;
+  --badge-a-faire-text: #d1d5db;
+}

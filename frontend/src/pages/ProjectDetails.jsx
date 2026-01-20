@@ -15,7 +15,8 @@ import {
   Clock,
   Edit2,
   X,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 import './ProjectDetails.scss';
 
@@ -40,6 +41,7 @@ const ProjectDetails = () => {
     client_name: '',
     client_email: '',
     client_phone: '',
+    website_url: '',
     description: '',
     budget: '',
     status: 'devis',
@@ -69,6 +71,7 @@ const ProjectDetails = () => {
         client_name: projectRes.data.client_name || '',
         client_email: projectRes.data.client_email || '',
         client_phone: projectRes.data.client_phone || '',
+        website_url: projectRes.data.website_url || '',
         description: projectRes.data.description || '',
         budget: projectRes.data.budget || '',
         status: projectRes.data.status || 'devis',
@@ -100,6 +103,7 @@ const ProjectDetails = () => {
         deadline: formData.deadline || null,
         client_email: formData.client_email || null,
         client_phone: formData.client_phone || null,
+        website_url: formData.website_url || null,
         description: formData.description || null
       };
 
@@ -442,6 +446,33 @@ const ProjectDetails = () => {
                     <p className="form-value">{project?.client_phone || '-'}</p>
                   )}
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label>URL du site web</label>
+                {isEditing ? (
+                  <input
+                    type="url"
+                    name="website_url"
+                    value={formData.website_url}
+                    onChange={handleChange}
+                    placeholder="https://www.example.com"
+                  />
+                ) : (
+                  <p className="form-value">
+                    {project?.website_url ? (
+                      <a
+                        href={project.website_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="website-link"
+                      >
+                        {project.website_url}
+                        <ExternalLink size={14} />
+                      </a>
+                    ) : '-'}
+                  </p>
+                )}
               </div>
             </div>
           </div>

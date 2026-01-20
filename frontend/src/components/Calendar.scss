@@ -1,10 +1,12 @@
 @import '../styles/variables';
 
 .calendar {
-  background-color: $card-bg;
+  background-color: var(--card-bg);
   border-radius: 12px;
-  border: 1px solid $border-color;
+  border: 1px solid var(--border-color);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: $transition;
 }
 
 .calendar-header {
@@ -12,8 +14,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid $border-color;
-  background-color: $bg-color;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-elevated);
 
   @media (max-width: $mobile) {
     padding: 16px;
@@ -31,10 +33,12 @@
       font-weight: 600;
       min-width: 180px;
       text-align: center;
+      color: var(--text-primary);
+      margin: 0;
 
       @media (max-width: $mobile) {
         font-size: 16px;
-        min-width: 150px;
+        min-width: 140px;
       }
     }
 
@@ -42,8 +46,9 @@
       width: 36px;
       height: 36px;
       border-radius: 8px;
-      border: 1px solid $border-color;
-      background-color: $card-bg;
+      border: 1px solid var(--border-color);
+      background-color: var(--card-bg);
+      color: var(--text-secondary);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -51,9 +56,13 @@
       transition: $transition;
 
       &:hover {
-        background-color: $primary-color;
+        background-color: var(--hover-bg);
+        color: $primary-color;
         border-color: $primary-color;
-        color: white;
+      }
+
+      svg {
+        display: block; // Assure le centrage de l'icône Lucide
       }
     }
   }
@@ -78,6 +87,7 @@
 
 .calendar-grid {
   padding: 16px;
+  background-color: var(--card-bg);
 
   @media (max-width: $mobile) {
     padding: 8px;
@@ -93,34 +103,40 @@
     text-align: center;
     font-size: 12px;
     font-weight: 600;
-    color: $text-secondary;
+    color: var(--text-secondary);
     padding: 8px 0;
     text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 }
 
 .calendar-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 4px; // Espace entre les jours
 }
 
 .calendar-day {
-  min-height: 80px;
+  min-height: 100px; // Augmenté pour laisser de la place aux noms d'événements
   padding: 8px;
   border-radius: 8px;
-  background-color: $bg-color;
+  background-color: var(--bg-color);
   cursor: pointer;
   transition: $transition;
   position: relative;
+  border: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
 
   @media (max-width: $mobile) {
-    min-height: 60px;
+    min-height: 65px;
     padding: 4px;
   }
 
   &:hover:not(.empty) {
-    background-color: rgba($primary-color, 0.1);
+    background-color: var(--hover-bg);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
   }
 
   &.empty {
@@ -129,60 +145,72 @@
   }
 
   &.today {
-    background-color: rgba($primary-color, 0.15);
-    border: 2px solid $primary-color;
+    background-color: rgba($primary-color, 0.08);
+    border: 1px solid $primary-color;
 
     .day-number {
       color: $primary-color;
-      font-weight: 700;
+      font-weight: 800;
     }
   }
 
   &.past:not(.today) {
-    opacity: 0.6;
-
+    opacity: 0.5;
+    
     .day-number {
-      color: $text-secondary;
+      color: var(--text-secondary);
+    }
+    
+    .event-dot {
+      filter: grayscale(0.5) opacity(0.8);
     }
   }
 
   &.has-events {
-    background-color: rgba($primary-color, 0.05);
+    background-color: var(--bg-elevated);
+    border-color: var(--border-color);
   }
 
   .day-number {
     font-size: 14px;
     font-weight: 500;
-    color: $text-primary;
+    color: var(--text-primary);
+    margin-bottom: 4px;
 
     @media (max-width: $mobile) {
-      font-size: 12px;
+      font-size: 11px;
     }
   }
 }
 
 .day-events {
-  margin-top: 4px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  overflow: hidden;
 }
 
 .event-dot {
-  font-size: 11px;
+  font-size: 10px;
   padding: 2px 6px;
   border-radius: 4px;
   cursor: pointer;
   transition: $transition;
-  overflow: hidden;
+  width: 100%;
+  border: none;
 
   @media (max-width: $mobile) {
-    padding: 2px 4px;
-    font-size: 10px;
+    padding: 1px 3px;
+    height: 6px; // Transformé en simple barre sur mobile pour gagner de la place
+    
+    .event-name {
+      display: none; // Cache le texte sur mobile
+    }
   }
 
   &:hover {
-    transform: scale(1.02);
+    filter: brightness(1.15);
+    z-index: 10;
   }
 
   .event-name {
@@ -190,28 +218,21 @@
     overflow: hidden;
     text-overflow: ellipsis;
     display: block;
-    color: white;
+    color: white; // Texte blanc sur les pastilles de couleur
+    font-weight: 500;
   }
 
-  &.status-devis {
-    background-color: $warning-color;
-  }
-
-  &.status-en_cours {
-    background-color: #3b82f6;
-  }
-
-  &.status-termine {
-    background-color: $success-color;
-  }
-
-  &.status-annule {
-    background-color: $danger-color;
-  }
+  // Mappage des statuts sur vos variables de thème
+  &.status-devis { background-color: $warning-color; }
+  &.status-en_cours, &.status-en-cours { background-color: #3b82f6; }
+  &.status-termine { background-color: $success-color; }
+  &.status-annule { background-color: $danger-color; }
 }
 
 .more-events {
   font-size: 10px;
-  color: $text-secondary;
-  padding: 2px 4px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding-left: 4px;
+  margin-top: 2px;
 }

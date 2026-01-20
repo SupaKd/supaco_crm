@@ -1,3 +1,5 @@
+@import '../styles/variables';
+
 .loader-fullscreen {
   position: fixed;
   top: 0;
@@ -7,8 +9,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.9);
+  // Utilisation d'une opacité sur la variable de fond pour le mode sombre
+  background: rgba(var(--bg-color), 0.9); 
+  // Fallback si la variable n'est pas au format RGB
+  background-color: var(--bg-color);
+  opacity: 0.95;
   z-index: 9998;
+  backdrop-filter: blur(4px); // Ajoute un effet de flou moderne sur le contenu derrière
 }
 
 .loader {
@@ -42,8 +49,10 @@
   }
 
   .spinner {
-    border: 3px solid #e5e7eb;
-    border-top-color: #3b82f6;
+    // La partie "vide" du spinner utilise la couleur de bordure du thème
+    border: 3px solid var(--border-color);
+    // La partie tournante utilise votre couleur primaire (Indigo/Bleu)
+    border-top-color: $primary-color;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }

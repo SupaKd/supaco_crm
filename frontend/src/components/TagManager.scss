@@ -1,3 +1,5 @@
+@import '../styles/variables';
+
 .tag-manager {
   .tag-manager-header {
     display: flex;
@@ -11,7 +13,7 @@
       gap: 0.5rem;
       margin: 0;
       font-size: 1rem;
-      color: #1f2937;
+      color: var(--text-primary);
     }
 
     .btn-create-tag {
@@ -19,40 +21,50 @@
       align-items: center;
       gap: 0.375rem;
       padding: 0.5rem 0.875rem;
-      background: white;
-      border: 1px solid #e5e7eb;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
       border-radius: 6px;
-      color: #6b7280;
+      color: var(--text-secondary);
       font-size: 0.8125rem;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: $transition;
 
       &:hover {
-        background: #f9fafb;
-        border-color: #d1d5db;
+        background: var(--hover-bg);
+        border-color: var(--text-secondary);
+        color: var(--text-primary);
       }
     }
   }
 
   .create-tag-form {
-    background: #f9fafb;
+    background: var(--bg-color); // Utilise le fond plus sombre pour contraster avec la carte
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    border: 1px solid var(--border-color);
 
     input {
       padding: 0.625rem;
-      border: 1px solid #d1d5db;
+      border: 1px solid var(--border-color);
       border-radius: 6px;
       font-size: 0.875rem;
+      background-color: var(--input-bg);
+      color: var(--text-primary);
+      font-family: inherit;
 
       &:focus {
         outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        border-color: $primary-color;
+        box-shadow: 0 0 0 3px rgba($primary-color, 0.15);
+      }
+
+      &::placeholder {
+        color: var(--text-secondary);
+        opacity: 0.6;
       }
     }
 
@@ -67,15 +79,17 @@
         border-radius: 6px;
         border: 2px solid transparent;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: $transition;
 
         &:hover {
           transform: scale(1.1);
+          filter: brightness(1.1);
         }
 
         &.active {
-          border-color: #1f2937;
-          box-shadow: 0 0 0 2px white, 0 0 0 4px currentColor;
+          border-color: var(--text-primary);
+          // Le double cercle pour faire ressortir la couleur choisie en dark mode
+          box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px currentColor;
         }
       }
     }
@@ -84,6 +98,16 @@
       padding: 0.5rem 1rem;
       font-size: 0.8125rem;
       align-self: flex-start;
+      background-color: $primary-color;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: $transition;
+
+      &:hover {
+        background-color: $primary-hover;
+      }
     }
   }
 
@@ -93,7 +117,7 @@
 
     h4 {
       font-size: 0.875rem;
-      color: #6b7280;
+      color: var(--text-secondary);
       margin: 0 0 0.75rem 0;
       font-weight: 600;
       text-transform: uppercase;
@@ -101,10 +125,11 @@
     }
 
     .empty-state {
-      color: #9ca3af;
+      color: var(--text-secondary);
       font-size: 0.875rem;
       font-style: italic;
       margin: 0;
+      opacity: 0.7;
     }
   }
 
@@ -122,15 +147,16 @@
       color: white;
       font-size: 0.8125rem;
       font-weight: 500;
-      transition: all 0.2s;
+      transition: $transition;
+      border: 1px solid rgba(255, 255, 255, 0.1); // Aide à la séparation en mode sombre
 
       &.clickable {
         cursor: pointer;
 
         &:hover {
-          opacity: 0.85;
+          opacity: 0.9;
           transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          box-shadow: var(--shadow-md);
         }
       }
 
@@ -142,7 +168,7 @@
         padding: 0;
         display: flex;
         align-items: center;
-        opacity: 0.8;
+        opacity: 0.7;
         transition: opacity 0.2s;
 
         &:hover {
@@ -153,7 +179,7 @@
   }
 
   &.loading {
-    color: #9ca3af;
+    color: var(--text-secondary);
     font-size: 0.875rem;
     padding: 2rem;
     text-align: center;
@@ -161,7 +187,7 @@
 }
 
 // Responsive
-@media (max-width: 640px) {
+@media (max-width: $mobile) {
   .tag-manager {
     .tag-manager-header {
       flex-direction: column;

@@ -1,6 +1,9 @@
+@import '../styles/variables';
+
 .analytics-page {
   max-width: 1400px;
   margin: 0 auto;
+  color: var(--text-primary);
 
   .page-header {
     margin-bottom: 2rem;
@@ -8,12 +11,12 @@
     h1 {
       margin: 0 0 0.5rem 0;
       font-size: 1.875rem;
-      color: #1f2937;
+      color: var(--text-primary);
     }
 
     p {
       margin: 0;
-      color: #6b7280;
+      color: var(--text-secondary);
       font-size: 0.875rem;
     }
   }
@@ -34,10 +37,12 @@
     margin-bottom: 2.5rem;
 
     .chart-card {
-      background: white;
+      background: var(--card-bg);
       border-radius: 12px;
       padding: 1.5rem;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      transition: $transition;
 
       &.full-width {
         grid-column: 1 / -1;
@@ -46,23 +51,29 @@
       h2 {
         margin: 0 0 1.5rem 0;
         font-size: 1.125rem;
-        color: #1f2937;
+        color: var(--text-primary);
         font-weight: 600;
+      }
+
+      &:hover {
+        box-shadow: var(--shadow-md);
+        border-color: rgba($primary-color, 0.3);
       }
     }
   }
 
   // Insights Section
   .insights-section {
-    background: white;
+    background: var(--card-bg);
     border-radius: 12px;
     padding: 2rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
 
     h2 {
       margin: 0 0 1.5rem 0;
       font-size: 1.25rem;
-      color: #1f2937;
+      color: var(--text-primary);
       font-weight: 600;
     }
 
@@ -79,6 +90,7 @@
       padding: 1.25rem;
       border-radius: 8px;
       border-left: 4px solid;
+      transition: $transition;
 
       svg {
         flex-shrink: 0;
@@ -97,62 +109,39 @@
         line-height: 1.5;
       }
 
+      // Utilisation des variables de badges pour la cohérence thématique
       &.info {
-        background: #eff6ff;
-        border-left-color: #3b82f6;
+        background: var(--badge-en-cours-bg);
+        border-left-color: $primary-color;
 
-        svg {
-          color: #3b82f6;
-        }
-
-        h4 {
-          color: #1e40af;
-        }
-
-        p {
-          color: #1e3a8a;
-        }
+        svg { color: var(--badge-en-cours-text); }
+        h4 { color: var(--badge-en-cours-text); }
+        p { color: var(--badge-en-cours-text); opacity: 0.9; }
       }
 
       &.warning {
-        background: #fff7ed;
-        border-left-color: #f59e0b;
+        background: var(--badge-devis-bg);
+        border-left-color: $warning-color;
 
-        svg {
-          color: #f59e0b;
-        }
-
-        h4 {
-          color: #92400e;
-        }
-
-        p {
-          color: #78350f;
-        }
+        svg { color: var(--badge-devis-text); }
+        h4 { color: var(--badge-devis-text); }
+        p { color: var(--badge-devis-text); opacity: 0.9; }
       }
 
       &.success {
-        background: #f0fdf4;
-        border-left-color: #10b981;
+        background: var(--badge-termine-bg);
+        border-left-color: $success-color;
 
-        svg {
-          color: #10b981;
-        }
-
-        h4 {
-          color: #065f46;
-        }
-
-        p {
-          color: #064e3b;
-        }
+        svg { color: var(--badge-termine-text); }
+        h4 { color: var(--badge-termine-text); }
+        p { color: var(--badge-termine-text); opacity: 0.9; }
       }
     }
   }
 }
 
 // Responsive
-@media (max-width: 1024px) {
+@media (max-width: $tablet) {
   .analytics-page {
     .charts-section {
       grid-template-columns: 1fr;
@@ -164,7 +153,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: $mobile) {
   .analytics-page {
     .kpi-grid {
       grid-template-columns: 1fr;
