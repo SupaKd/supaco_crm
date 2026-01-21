@@ -63,48 +63,7 @@ const Dashboard = () => {
         </Link>
       </div>
 
-      {/* Stats Cards */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: '#dbeafe' }}>
-            <BarChart3 size={24} color="#3b82f6" />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Total Projets</p>
-            <h2 className="stat-value">{stats.total}</h2>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: '#fef3c7' }}>
-            <FileText size={24} color="#f59e0b" />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Devis</p>
-            <h2 className="stat-value">{stats.devis}</h2>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: '#dbeafe' }}>
-            <Settings size={24} color="#3b82f6" />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">En cours</p>
-            <h2 className="stat-value">{stats.en_cours}</h2>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon" style={{ backgroundColor: '#d1fae5' }}>
-            <CheckCircle2 size={24} color="#10b981" />
-          </div>
-          <div className="stat-content">
-            <p className="stat-label">Terminés</p>
-            <h2 className="stat-value">{stats.termine}</h2>
-          </div>
-        </div>
-      </div>
+      
 
       {/* Actions & Deadlines Section */}
       <div className="dashboard-widgets">

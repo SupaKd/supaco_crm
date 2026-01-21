@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { projectsAPI, tasksAPI, notesAPI } from '../services/api';
+import { projectsAPI, tasksAPI, notesAPI, attachmentsAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import Modal from '../components/Modal';
 import Loader from '../components/Loader';
@@ -16,7 +16,11 @@ import {
   Edit2,
   X,
   AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  Upload,
+  FileText,
+  Download,
+  File
 } from 'lucide-react';
 import './ProjectDetails.scss';
 
@@ -32,6 +36,7 @@ const ProjectDetails = () => {
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [attachments, setAttachments] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -52,6 +57,10 @@ const ProjectDetails = () => {
   const [newTask, setNewTask] = useState({ title: '', description: '', status: 'a_faire', priority: 'moyenne' });
   const [newNote, setNewNote] = useState('');
 
+  // Upload de fichier
+  const [uploading, setUploading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('autre');
+
   useEffect(() => {
     fetchProjectData();
   }, [id]);
@@ -64,6 +73,14 @@ const ProjectDetails = () => {
         tasksAPI.getByProject(id),
         notesAPI.getByProject(id)
       ]);
+
+      // Récupérer les pièces jointes séparément pour gérer le cas où la table n'existe pas
+      try {
+        const attachmentsRes = await attachmentsAPI.getByProject(id);
+        setAttachments(attachmentsRes.data);
+      } catch {
+        setAttachments([]);
+      }
 
       setProject(projectRes.data);
       setFormData({
@@ -198,6 +215,80 @@ const ProjectDetails = () => {
     }
   };
 
+  // Pièces jointes
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      await attachmentsAPI.upload(id, file, selectedCategory);
+      await fetchProjectData();
+      toast.success('Fichier ajouté');
+      setSelectedCategory('autre');
+      e.target.value = '';
+    } catch (err) {
+      console.error('Erreur upload fichier:', err);
+      toast.error('Erreur lors de l\'upload du fichier');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDownloadAttachment = async (attachment) => {
+    try {
+      const response = await attachmentsAPI.download(attachment.id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', attachment.original_name);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erreur téléchargement fichier:', err);
+      toast.error('Erreur lors du téléchargement');
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    try {
+      await attachmentsAPI.delete(attachmentId);
+      await fetchProjectData();
+      toast.success('Fichier supprimé');
+    } catch (err) {
+      console.error('Erreur suppression fichier:', err);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'Ko', 'Mo', 'Go'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getCategoryLabel = (category) => {
+    const labels = {
+      'devis': 'Devis',
+      'facture': 'Facture',
+      'contrat': 'Contrat',
+      'autre': 'Autre'
+    };
+    return labels[category] || category;
+  };
+
+  const getFileIcon = (mimeType) => {
+    if (mimeType.startsWith('image/')) return '🖼️';
+    if (mimeType === 'application/pdf') return '📄';
+    if (mimeType.includes('word')) return '📝';
+    if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📊';
+    return '📎';
+  };
+
   if (loading) {
     return <Loader fullScreen />;
   }
@@ -308,6 +399,12 @@ const ProjectDetails = () => {
           onClick={() => setActiveTab('notes')}
         >
           Notes ({notes.length})
+        </button>
+        <button
+          className={activeTab === 'documents' ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab('documents')}
+        >
+          Documents ({attachments.length})
         </button>
         <button
           className={activeTab === 'tags' ? 'tab active' : 'tab'}
@@ -557,6 +654,81 @@ const ProjectDetails = () => {
                       </button>
                     </div>
                     <p className="note-content">{note.content}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'documents' && (
+          <div className="documents-tab">
+            <div className="upload-section">
+              <div className="upload-form">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="category-select"
+                >
+                  <option value="devis">Devis</option>
+                  <option value="facture">Facture</option>
+                  <option value="contrat">Contrat</option>
+                  <option value="autre">Autre</option>
+                </select>
+                <label className="upload-btn btn btn-primary">
+                  <Upload size={18} />
+                  {uploading ? 'Upload...' : 'Ajouter un fichier'}
+                  <input
+                    type="file"
+                    onChange={handleFileUpload}
+                    disabled={uploading}
+                    accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx"
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              </div>
+              <p className="upload-hint">
+                Formats acceptés : PDF, images, Word, Excel (max 10 Mo)
+              </p>
+            </div>
+
+            <div className="attachments-list">
+              {attachments.length === 0 ? (
+                <p className="empty-state">Aucun document pour ce projet</p>
+              ) : (
+                attachments.map((attachment) => (
+                  <div key={attachment.id} className="attachment-item">
+                    <div className="attachment-icon">
+                      {getFileIcon(attachment.mime_type)}
+                    </div>
+                    <div className="attachment-info">
+                      <h4>{attachment.original_name}</h4>
+                      <div className="attachment-meta">
+                        <span className={`category-badge category-${attachment.category}`}>
+                          {getCategoryLabel(attachment.category)}
+                        </span>
+                        <span className="file-size">{formatFileSize(attachment.size)}</span>
+                        <span className="file-date">
+                          {new Date(attachment.created_at).toLocaleDateString('fr-FR')}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="attachment-actions">
+                      <button
+                        className="action-btn download"
+                        onClick={() => handleDownloadAttachment(attachment)}
+                        title="Télécharger"
+                      >
+                        <Download size={18} />
+                      </button>
+                      <button
+                        className="action-btn delete"
+                        onClick={() => handleDeleteAttachment(attachment.id)}
+                        title="Supprimer"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}

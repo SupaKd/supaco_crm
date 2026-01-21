@@ -6,16 +6,18 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: linear-gradient(135deg, $primary-color 0%, #6366f1 100%);
+  // Dégradé utilisant vos variables pour une cohérence de marque
+  background: linear-gradient(135deg, $primary-color 0%, $primary-hover 100%);
 }
 
 .auth-card {
-  background-color: $card-bg;
+  background-color: var(--card-bg);
   border-radius: 16px;
   padding: 40px;
   width: 100%;
   max-width: 440px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg); // Utilisation de l'ombre large pour l'effet de profondeur
 
   @media (max-width: $mobile) {
     padding: 30px 20px;
@@ -26,41 +28,43 @@
   text-align: center;
   margin-bottom: 32px;
 
-  h1 {
-    font-size: 28px;
-    font-weight: 700;
-    color: $primary-color;
-    margin-bottom: 8px;
+  img {
+    height: 60px;
+    margin-bottom: 16px;
   }
 
   p {
-    color: $text-secondary;
+    color: var(--text-secondary);
     font-size: 14px;
   }
 }
 
 .error-message {
-  background-color: #fee2e2;
-  color: #991b1b;
+  // Adaptation dynamique des couleurs d'erreur
+  background-color: rgba($danger-color, 0.1);
+  color: $danger-color;
   padding: 12px 16px;
   border-radius: 8px;
   margin-bottom: 20px;
   font-size: 14px;
-  border: 1px solid #fecaca;
+  border: 1px solid rgba($danger-color, 0.2);
 }
 
 .auth-footer {
   text-align: center;
   margin-top: 24px;
-  color: $text-secondary;
+  color: var(--text-secondary);
   font-size: 14px;
 
   a {
     color: $primary-color;
     font-weight: 600;
+    transition: $transition;
+    text-decoration: none;
 
     &:hover {
       text-decoration: underline;
+      color: $primary-hover;
     }
   }
 }

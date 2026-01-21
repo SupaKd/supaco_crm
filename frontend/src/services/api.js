@@ -87,4 +87,31 @@ export const quicknotesAPI = {
   delete: (id) => api.delete(`/quicknotes/${id}`)
 };
 
+// Attachments (Pièces jointes)
+export const attachmentsAPI = {
+  getByProject: (projectId) => api.get(`/attachments/project/${projectId}`),
+  upload: (projectId, file, category) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('category', category);
+    return api.post(`/attachments/project/${projectId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  download: (id) => api.get(`/attachments/${id}/download`, { responseType: 'blob' }),
+  delete: (id) => api.delete(`/attachments/${id}`)
+};
+
+// Prospects
+export const prospectsAPI = {
+  getAll: () => api.get('/prospects'),
+  getOne: (id) => api.get(`/prospects/${id}`),
+  create: (data) => api.post('/prospects', data),
+  update: (id, data) => api.put(`/prospects/${id}`, data),
+  updateStatus: (id, status) => api.patch(`/prospects/${id}/status`, { status }),
+  delete: (id) => api.delete(`/prospects/${id}`),
+  getInteractions: (id) => api.get(`/prospects/${id}/interactions`),
+  addInteraction: (id, data) => api.post(`/prospects/${id}/interactions`, data)
+};
+
 export default api;

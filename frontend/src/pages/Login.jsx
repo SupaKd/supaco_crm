@@ -41,7 +41,7 @@ const Login = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>Project Manager</h1>
+          <img src="/newlogo.png" alt="logo" />
           <p>Connectez-vous à votre compte</p>
         </div>
 

@@ -42,7 +42,7 @@ const Register = () => {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>Project Manager</h1>
+          <img src="/newlogo.png" alt="logo" />
           <p>Créez votre compte</p>
         </div>
 

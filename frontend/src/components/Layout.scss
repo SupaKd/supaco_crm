@@ -38,7 +38,7 @@
 }
 
 .sidebar-header {
-  padding: 24px 20px;
+  padding: 10px 20px;
   border-bottom: 1px solid var(--border-color);
   transition: border-color 0.3s ease;
 
@@ -53,10 +53,8 @@
     margin-bottom: 8px;
   }
 
-  h2 {
-    font-size: 20px;
-    font-weight: 700;
-    color: $primary-color;
+  img {
+    height: 50px;
   }
 
   .user-name {
@@ -133,7 +131,7 @@
     display: none;
 
     @media (max-width: $mobile) {
-      display: flex;
+      display: none;
     }
   }
 

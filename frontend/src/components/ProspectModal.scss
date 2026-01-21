@@ -1,0 +1,248 @@
+@import '../styles/variables';
+
+.prospect-modal-content {
+  .modal-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border-color);
+
+    .tab {
+      padding: 0.75rem 1rem;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: -2px;
+
+      &:hover {
+        color: var(--text-primary);
+      }
+
+      &.active {
+        color: $primary-color;
+        border-bottom-color: $primary-color;
+      }
+    }
+  }
+
+  .prospect-form {
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+
+      @media (max-width: 500px) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+
+      label {
+        display: block;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-bottom: 0.375rem;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 0.625rem 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 0.875rem;
+        background: var(--input-bg);
+        color: var(--text-primary);
+        transition: all 0.2s;
+
+        &:focus {
+          outline: none;
+          border-color: $primary-color;
+          box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+        }
+      }
+
+      textarea {
+        resize: vertical;
+        font-family: inherit;
+      }
+    }
+  }
+
+  .interactions-section {
+    .add-interaction {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: var(--bg-color);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+
+      .interaction-type-select {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+
+        .type-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+          padding: 0.375rem 0.75rem;
+          background: var(--card-bg);
+          border: 1px solid var(--border-color);
+          border-radius: 6px;
+          color: var(--text-secondary);
+          font-size: 0.8125rem;
+          cursor: pointer;
+          transition: all 0.2s;
+
+          &:hover {
+            border-color: var(--text-secondary);
+          }
+
+          &.active {
+            background: $primary-color;
+            border-color: $primary-color;
+            color: white;
+          }
+        }
+      }
+
+      textarea {
+        width: 100%;
+        padding: 0.625rem 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 0.875rem;
+        background: var(--input-bg);
+        color: var(--text-primary);
+        resize: vertical;
+        font-family: inherit;
+        margin-bottom: 0.75rem;
+
+        &:focus {
+          outline: none;
+          border-color: $primary-color;
+        }
+      }
+
+      .btn-sm {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.8125rem;
+      }
+    }
+
+    .interactions-list {
+      .loading,
+      .empty {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+      }
+
+      .interaction-item {
+        display: flex;
+        gap: 0.75rem;
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        background: var(--bg-color);
+
+        .interaction-icon {
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--hover-bg);
+          border-radius: 6px;
+          color: var(--text-secondary);
+          flex-shrink: 0;
+        }
+
+        .interaction-content {
+          flex: 1;
+          min-width: 0;
+
+          .interaction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.375rem;
+
+            .interaction-type {
+              font-size: 0.75rem;
+              font-weight: 600;
+              text-transform: uppercase;
+              color: $primary-color;
+            }
+
+            .interaction-date {
+              font-size: 0.75rem;
+              color: var(--text-secondary);
+            }
+          }
+
+          p {
+            margin: 0;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            line-height: 1.5;
+            white-space: pre-wrap;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Styles des boutons dans le footer de la modal
+.modal-footer {
+  .btn {
+    padding: 0.625rem 1.25rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &.btn-secondary {
+      background: var(--card-bg);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+
+      &:hover {
+        background: var(--hover-bg);
+      }
+    }
+
+    &.btn-primary {
+      background: $primary-color;
+      color: white;
+      border: none;
+
+      &:hover:not(:disabled) {
+        background: $primary-hover;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
