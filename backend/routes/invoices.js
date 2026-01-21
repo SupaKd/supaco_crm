@@ -2,18 +2,39 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const authMiddleware = require('../middleware/auth');
+const { validateBody, invoiceSchema } = require('../validators/schemas');
 
 // Toutes les routes nécessitent l'authentification
 router.use(authMiddleware);
 
+// Helper pour vérifier l'accès au projet
+const verifyProjectAccess = async (projectId, userId) => {
+  const [project] = await db.query(
+    'SELECT id FROM projects WHERE id = ? AND user_id = ?',
+    [projectId, userId]
+  );
+  return project.length > 0;
+};
+
 // Récupérer toutes les factures annexes d'un projet
 router.get('/project/:projectId', async (req, res) => {
   try {
+    const projectId = parseInt(req.params.projectId);
+    if (isNaN(projectId) || projectId <= 0) {
+      return res.status(400).json({ message: 'ID de projet invalide' });
+    }
+
+    // Vérifier que le projet appartient à l'utilisateur
+    const hasAccess = await verifyProjectAccess(projectId, req.userId);
+    if (!hasAccess) {
+      return res.status(404).json({ message: 'Projet non trouvé' });
+    }
+
     const [invoices] = await db.query(
       `SELECT * FROM project_invoices
        WHERE project_id = ?
        ORDER BY invoice_date DESC`,
-      [req.params.projectId]
+      [projectId]
     );
     res.json(invoices);
   } catch (error) {
@@ -23,7 +44,7 @@ router.get('/project/:projectId', async (req, res) => {
 });
 
 // Créer une nouvelle facture annexe
-router.post('/', async (req, res) => {
+router.post('/', validateBody(invoiceSchema), async (req, res) => {
   try {
     const {
       project_id,
@@ -37,17 +58,9 @@ router.post('/', async (req, res) => {
       category
     } = req.body;
 
-    if (!project_id || !title || !amount) {
-      return res.status(400).json({ message: 'Projet, titre et montant requis' });
-    }
-
     // Vérifier que le projet appartient à l'utilisateur
-    const [project] = await db.query(
-      'SELECT id FROM projects WHERE id = ? AND user_id = ?',
-      [project_id, req.userId]
-    );
-
-    if (project.length === 0) {
+    const hasAccess = await verifyProjectAccess(project_id, req.userId);
+    if (!hasAccess) {
       return res.status(404).json({ message: 'Projet non trouvé' });
     }
 
@@ -79,6 +92,11 @@ router.post('/', async (req, res) => {
 // Mettre à jour une facture annexe
 router.put('/:id', async (req, res) => {
   try {
+    const invoiceId = parseInt(req.params.id);
+    if (isNaN(invoiceId) || invoiceId <= 0) {
+      return res.status(400).json({ message: 'ID de facture invalide' });
+    }
+
     const {
       invoice_number,
       title,
@@ -95,7 +113,7 @@ router.put('/:id', async (req, res) => {
       `SELECT pi.id FROM project_invoices pi
        JOIN projects p ON pi.project_id = p.id
        WHERE pi.id = ? AND p.user_id = ?`,
-      [req.params.id, req.userId]
+      [invoiceId, req.userId]
     );
 
     if (existing.length === 0) {
@@ -107,10 +125,10 @@ router.put('/:id', async (req, res) => {
        SET invoice_number = ?, title = ?, description = ?, amount = ?,
            invoice_date = ?, due_date = ?, status = ?, category = ?
        WHERE id = ?`,
-      [invoice_number, title, description, amount, invoice_date, due_date, status, category, req.params.id]
+      [invoice_number, title, description, amount, invoice_date, due_date, status, category, invoiceId]
     );
 
-    const [updated] = await db.query('SELECT * FROM project_invoices WHERE id = ?', [req.params.id]);
+    const [updated] = await db.query('SELECT * FROM project_invoices WHERE id = ?', [invoiceId]);
     res.json(updated[0]);
   } catch (error) {
     console.error('Erreur mise à jour facture:', error);
@@ -121,19 +139,24 @@ router.put('/:id', async (req, res) => {
 // Supprimer une facture annexe
 router.delete('/:id', async (req, res) => {
   try {
+    const invoiceId = parseInt(req.params.id);
+    if (isNaN(invoiceId) || invoiceId <= 0) {
+      return res.status(400).json({ message: 'ID de facture invalide' });
+    }
+
     // Vérifier que la facture appartient à un projet de l'utilisateur
     const [existing] = await db.query(
       `SELECT pi.id FROM project_invoices pi
        JOIN projects p ON pi.project_id = p.id
        WHERE pi.id = ? AND p.user_id = ?`,
-      [req.params.id, req.userId]
+      [invoiceId, req.userId]
     );
 
     if (existing.length === 0) {
       return res.status(404).json({ message: 'Facture non trouvée' });
     }
 
-    await db.query('DELETE FROM project_invoices WHERE id = ?', [req.params.id]);
+    await db.query('DELETE FROM project_invoices WHERE id = ?', [invoiceId]);
     res.json({ message: 'Facture supprimée' });
   } catch (error) {
     console.error('Erreur suppression facture:', error);
@@ -144,15 +167,26 @@ router.delete('/:id', async (req, res) => {
 // Récupérer le total des factures annexes d'un projet
 router.get('/project/:projectId/total', async (req, res) => {
   try {
+    const projectId = parseInt(req.params.projectId);
+    if (isNaN(projectId) || projectId <= 0) {
+      return res.status(400).json({ message: 'ID de projet invalide' });
+    }
+
+    // Vérifier que le projet appartient à l'utilisateur
+    const hasAccess = await verifyProjectAccess(projectId, req.userId);
+    if (!hasAccess) {
+      return res.status(404).json({ message: 'Projet non trouvé' });
+    }
+
     const [result] = await db.query(
       `SELECT
          COUNT(*) as count,
-         SUM(amount) as total,
-         SUM(CASE WHEN status = 'payee' THEN amount ELSE 0 END) as paid,
-         SUM(CASE WHEN status = 'en_attente' THEN amount ELSE 0 END) as pending
+         COALESCE(SUM(amount), 0) as total,
+         COALESCE(SUM(CASE WHEN status = 'payee' THEN amount ELSE 0 END), 0) as paid,
+         COALESCE(SUM(CASE WHEN status = 'en_attente' THEN amount ELSE 0 END), 0) as pending
        FROM project_invoices
        WHERE project_id = ?`,
-      [req.params.projectId]
+      [projectId]
     );
     res.json(result[0]);
   } catch (error) {

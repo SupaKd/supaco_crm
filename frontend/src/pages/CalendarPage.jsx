@@ -19,8 +19,8 @@ const CalendarPage = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await projectsAPI.getAll();
-      setProjects(response.data);
+      const response = await projectsAPI.getAll({ limit: 1000 });
+      setProjects(response.data.data || []);
     } catch (error) {
       console.error('Erreur chargement projets:', error);
     } finally {

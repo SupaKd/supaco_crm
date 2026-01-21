@@ -26,9 +26,11 @@ const Dashboard = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await projectsAPI.getAll();
-      setProjects(response.data);
-      calculateStats(response.data);
+      // Récupérer tous les projets (limite haute pour le dashboard)
+      const response = await projectsAPI.getAll({ limit: 1000 });
+      const projectsData = response.data.data || [];
+      setProjects(projectsData);
+      calculateStats(projectsData);
     } catch (error) {
       console.error('Erreur chargement projets:', error);
     } finally {

@@ -3,21 +3,19 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
+const { validateBody, registerSchema, loginSchema } = require('../validators/schemas');
 
 // Inscription
-router.post('/register', async (req, res) => {
+router.post('/register', validateBody(registerSchema), async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Tous les champs sont requis' });
-    }
-
     // Vérifier si l'email existe déjà
     const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
-    
+
     if (existingUser.length > 0) {
-      return res.status(400).json({ message: 'Cet email est déjà utilisé' });
+      // Message générique pour éviter l'énumération d'utilisateurs
+      return res.status(400).json({ message: 'Impossible de créer le compte' });
     }
 
     // Hasher le mot de passe
@@ -50,17 +48,13 @@ router.post('/register', async (req, res) => {
 });
 
 // Connexion
-router.post('/login', async (req, res) => {
+router.post('/login', validateBody(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email et mot de passe requis' });
-    }
-
     // Trouver l'utilisateur
     const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
-    
+
     if (users.length === 0) {
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
@@ -69,7 +63,7 @@ router.post('/login', async (req, res) => {
 
     // Vérifier le mot de passe
     const isValidPassword = await bcrypt.compare(password, user.password);
-    
+
     if (!isValidPassword) {
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
