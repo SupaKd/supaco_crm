@@ -4,7 +4,6 @@ import { useTheme } from "../contexts/ThemeContext";
 import {
   LayoutDashboard,
   Folder,
-  Calendar,
   LogOut,
   Sun,
   Moon,
@@ -73,19 +72,6 @@ const Layout = ({ children }) => {
             </span>
             <span className="text">Commercial</span>
           </NavLink>
-          <NavLink
-            to="/calendar"
-            className={({ isActive }) =>
-              isActive ? "nav-link active" : "nav-link"
-            }
-          >
-            <span className="icon">
-              <Calendar size={20} />
-            </span>
-            <span className="text">Marketing</span>
-          </NavLink>
-          
-         
 
           {/* Theme toggle for mobile */}
           <button

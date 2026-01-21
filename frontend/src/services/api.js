@@ -44,7 +44,16 @@ export const authAPI = {
 
 // Projects
 export const projectsAPI = {
-  getAll: () => api.get('/projects'),
+  getAll: (params = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.tagId) queryParams.append('tagId', params.tagId);
+    const queryString = queryParams.toString();
+    return api.get(`/projects${queryString ? `?${queryString}` : ''}`);
+  },
   getOne: (id) => api.get(`/projects/${id}`),
   create: (data) => api.post('/projects', data),
   update: (id, data) => api.put(`/projects/${id}`, data),
@@ -112,6 +121,15 @@ export const prospectsAPI = {
   delete: (id) => api.delete(`/prospects/${id}`),
   getInteractions: (id) => api.get(`/prospects/${id}/interactions`),
   addInteraction: (id, data) => api.post(`/prospects/${id}/interactions`, data)
+};
+
+// Factures annexes (Project Invoices)
+export const invoicesAPI = {
+  getByProject: (projectId) => api.get(`/invoices/project/${projectId}`),
+  getTotal: (projectId) => api.get(`/invoices/project/${projectId}/total`),
+  create: (data) => api.post('/invoices', data),
+  update: (id, data) => api.put(`/invoices/${id}`, data),
+  delete: (id) => api.delete(`/invoices/${id}`)
 };
 
 export default api;

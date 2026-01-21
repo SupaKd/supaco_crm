@@ -6,18 +6,71 @@ const authMiddleware = require('../middleware/auth');
 // Toutes les routes nécessitent l'authentification
 router.use(authMiddleware);
 
-// Récupérer tous les prospects de l'utilisateur
+// Récupérer tous les prospects de l'utilisateur (avec pagination optionnelle)
 router.get('/', async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 0;
+    const limit = parseInt(req.query.limit) || 0;
+    const search = req.query.search || '';
+    const status = req.query.status || '';
+
+    // Construire la requête avec filtres
+    let whereClause = 'WHERE p.user_id = ?';
+    let params = [req.userId];
+
+    if (search) {
+      whereClause += ' AND (p.first_name LIKE ? OR p.last_name LIKE ? OR p.company LIKE ? OR p.email LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    if (status) {
+      whereClause += ' AND p.status = ?';
+      params.push(status);
+    }
+
+    // Si pas de pagination, retourner tous les résultats (comportement par défaut pour le Kanban)
+    if (!page && !limit) {
+      const [prospects] = await db.query(
+        `SELECT p.*, pr.name as project_name
+         FROM prospects p
+         LEFT JOIN projects pr ON p.project_id = pr.id
+         ${whereClause}
+         ORDER BY p.updated_at DESC`,
+        params
+      );
+      return res.json(prospects);
+    }
+
+    // Avec pagination
+    const offset = (page - 1) * limit;
+
+    // Compter le total
+    const [countResult] = await db.query(
+      `SELECT COUNT(*) as total FROM prospects p ${whereClause}`,
+      params
+    );
+    const total = countResult[0].total;
+
+    // Récupérer les prospects paginés
     const [prospects] = await db.query(
       `SELECT p.*, pr.name as project_name
        FROM prospects p
        LEFT JOIN projects pr ON p.project_id = pr.id
-       WHERE p.user_id = ?
-       ORDER BY p.updated_at DESC`,
-      [req.userId]
+       ${whereClause}
+       ORDER BY p.updated_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
-    res.json(prospects);
+
+    res.json({
+      data: prospects,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     console.error('Erreur récupération prospects:', error);
     res.status(500).json({ message: 'Erreur serveur' });

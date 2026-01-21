@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { projectsAPI, tasksAPI, notesAPI, attachmentsAPI } from '../services/api';
+import { projectsAPI, tasksAPI, notesAPI, attachmentsAPI, invoicesAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import Modal from '../components/Modal';
 import Loader from '../components/Loader';
@@ -20,7 +20,9 @@ import {
   Upload,
   FileText,
   Download,
-  File
+  File,
+  Receipt,
+  Euro
 } from 'lucide-react';
 import './ProjectDetails.scss';
 
@@ -37,8 +39,12 @@ const ProjectDetails = () => {
   const [tasks, setTasks] = useState([]);
   const [notes, setNotes] = useState([]);
   const [attachments, setAttachments] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [invoicesTotal, setInvoicesTotal] = useState({ count: 0, total: 0, paid: 0, pending: 0 });
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState(null);
 
   // Formulaire du projet
   const [formData, setFormData] = useState({
@@ -61,6 +67,18 @@ const ProjectDetails = () => {
   const [uploading, setUploading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('autre');
 
+  // Formulaire facture annexe
+  const [invoiceForm, setInvoiceForm] = useState({
+    invoice_number: '',
+    title: '',
+    description: '',
+    amount: '',
+    invoice_date: new Date().toISOString().split('T')[0],
+    due_date: '',
+    status: 'en_attente',
+    category: 'modification'
+  });
+
   useEffect(() => {
     fetchProjectData();
   }, [id]);
@@ -80,6 +98,19 @@ const ProjectDetails = () => {
         setAttachments(attachmentsRes.data);
       } catch {
         setAttachments([]);
+      }
+
+      // Récupérer les factures annexes
+      try {
+        const [invoicesRes, invoicesTotalRes] = await Promise.all([
+          invoicesAPI.getByProject(id),
+          invoicesAPI.getTotal(id)
+        ]);
+        setInvoices(invoicesRes.data);
+        setInvoicesTotal(invoicesTotalRes.data);
+      } catch {
+        setInvoices([]);
+        setInvoicesTotal({ count: 0, total: 0, paid: 0, pending: 0 });
       }
 
       setProject(projectRes.data);
@@ -289,6 +320,93 @@ const ProjectDetails = () => {
     return '📎';
   };
 
+  // Factures annexes
+  const handleOpenInvoiceModal = (invoice = null) => {
+    if (invoice) {
+      setEditingInvoice(invoice);
+      setInvoiceForm({
+        invoice_number: invoice.invoice_number || '',
+        title: invoice.title || '',
+        description: invoice.description || '',
+        amount: invoice.amount || '',
+        invoice_date: invoice.invoice_date ? invoice.invoice_date.split('T')[0] : '',
+        due_date: invoice.due_date ? invoice.due_date.split('T')[0] : '',
+        status: invoice.status || 'en_attente',
+        category: invoice.category || 'modification'
+      });
+    } else {
+      setEditingInvoice(null);
+      setInvoiceForm({
+        invoice_number: '',
+        title: '',
+        description: '',
+        amount: '',
+        invoice_date: new Date().toISOString().split('T')[0],
+        due_date: '',
+        status: 'en_attente',
+        category: 'modification'
+      });
+    }
+    setShowInvoiceModal(true);
+  };
+
+  const handleSaveInvoice = async () => {
+    if (!invoiceForm.title.trim() || !invoiceForm.amount) {
+      toast.error('Le titre et le montant sont requis');
+      return;
+    }
+
+    try {
+      if (editingInvoice) {
+        await invoicesAPI.update(editingInvoice.id, invoiceForm);
+        toast.success('Facture mise à jour');
+      } else {
+        await invoicesAPI.create({ ...invoiceForm, project_id: id });
+        toast.success('Facture ajoutée');
+      }
+      setShowInvoiceModal(false);
+      setEditingInvoice(null);
+      await fetchProjectData();
+    } catch (err) {
+      console.error('Erreur sauvegarde facture:', err);
+      toast.error('Erreur lors de la sauvegarde');
+    }
+  };
+
+  const handleDeleteInvoice = async (invoiceId) => {
+    if (!confirm('Supprimer cette facture ?')) return;
+
+    try {
+      await invoicesAPI.delete(invoiceId);
+      toast.success('Facture supprimée');
+      await fetchProjectData();
+    } catch (err) {
+      console.error('Erreur suppression facture:', err);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const getInvoiceStatusBadge = (status) => {
+    const statusMap = {
+      'en_attente': { label: 'En attente', class: 'warning' },
+      'payee': { label: 'Payée', class: 'success' },
+      'annulee': { label: 'Annulée', class: 'danger' }
+    };
+    const s = statusMap[status] || { label: status, class: 'default' };
+    return <span className={`badge badge-${s.class}`}>{s.label}</span>;
+  };
+
+  const getInvoiceCategoryLabel = (category) => {
+    const labels = {
+      'modification': 'Modification',
+      'maintenance': 'Maintenance',
+      'hebergement': 'Hébergement',
+      'seo': 'SEO',
+      'autre': 'Autre'
+    };
+    return labels[category] || category;
+  };
+
   if (loading) {
     return <Loader fullScreen />;
   }
@@ -405,6 +523,12 @@ const ProjectDetails = () => {
           onClick={() => setActiveTab('documents')}
         >
           Documents ({attachments.length})
+        </button>
+        <button
+          className={activeTab === 'invoices' ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab('invoices')}
+        >
+          Factures ({invoices.length})
         </button>
         <button
           className={activeTab === 'tags' ? 'tab active' : 'tab'}
@@ -736,12 +860,196 @@ const ProjectDetails = () => {
           </div>
         )}
 
+        {activeTab === 'invoices' && (
+          <div className="invoices-tab">
+            <div className="invoices-summary">
+              <div className="summary-card">
+                <span className="summary-label">Total factures</span>
+                <span className="summary-value">{invoicesTotal.total ? `${parseFloat(invoicesTotal.total).toFixed(2)}€` : '0€'}</span>
+              </div>
+              <div className="summary-card success">
+                <span className="summary-label">Payées</span>
+                <span className="summary-value">{invoicesTotal.paid ? `${parseFloat(invoicesTotal.paid).toFixed(2)}€` : '0€'}</span>
+              </div>
+              <div className="summary-card warning">
+                <span className="summary-label">En attente</span>
+                <span className="summary-value">{invoicesTotal.pending ? `${parseFloat(invoicesTotal.pending).toFixed(2)}€` : '0€'}</span>
+              </div>
+            </div>
+
+            <div className="invoices-header">
+              <h3>Factures annexes</h3>
+              <button onClick={() => handleOpenInvoiceModal()} className="btn btn-primary">
+                <Plus size={18} />
+                Ajouter une facture
+              </button>
+            </div>
+
+            <div className="invoices-list">
+              {invoices.length === 0 ? (
+                <p className="empty-state">Aucune facture annexe pour ce projet</p>
+              ) : (
+                invoices.map((invoice) => (
+                  <div key={invoice.id} className="invoice-item">
+                    <div className="invoice-icon">
+                      <Receipt size={24} />
+                    </div>
+                    <div className="invoice-info">
+                      <div className="invoice-header">
+                        <h4>{invoice.title}</h4>
+                        {getInvoiceStatusBadge(invoice.status)}
+                      </div>
+                      {invoice.invoice_number && (
+                        <span className="invoice-number">N° {invoice.invoice_number}</span>
+                      )}
+                      {invoice.description && (
+                        <p className="invoice-description">{invoice.description}</p>
+                      )}
+                      <div className="invoice-meta">
+                        <span className="invoice-category">{getInvoiceCategoryLabel(invoice.category)}</span>
+                        <span className="invoice-date">
+                          {new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}
+                        </span>
+                        {invoice.due_date && (
+                          <span className="invoice-due">
+                            Échéance: {new Date(invoice.due_date).toLocaleDateString('fr-FR')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="invoice-amount">
+                      <span className="amount">{parseFloat(invoice.amount).toFixed(2)}€</span>
+                    </div>
+                    <div className="invoice-actions">
+                      <button
+                        className="action-btn edit"
+                        onClick={() => handleOpenInvoiceModal(invoice)}
+                        title="Modifier"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button
+                        className="action-btn delete"
+                        onClick={() => handleDeleteInvoice(invoice.id)}
+                        title="Supprimer"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'tags' && (
           <div className="tags-tab">
             <TagManager projectId={id} />
           </div>
         )}
       </div>
+
+      {/* Modal Facture Annexe */}
+      <Modal
+        isOpen={showInvoiceModal}
+        onClose={() => { setShowInvoiceModal(false); setEditingInvoice(null); }}
+        title={editingInvoice ? 'Modifier la facture' : 'Ajouter une facture annexe'}
+        footer={
+          <>
+            <button onClick={() => setShowInvoiceModal(false)} className="btn btn-secondary">
+              Annuler
+            </button>
+            <button onClick={handleSaveInvoice} className="btn btn-primary">
+              {editingInvoice ? 'Mettre à jour' : 'Ajouter'}
+            </button>
+          </>
+        }
+      >
+        <div className="form-group">
+          <label>Titre *</label>
+          <input
+            type="text"
+            value={invoiceForm.title}
+            onChange={(e) => setInvoiceForm({ ...invoiceForm, title: e.target.value })}
+            placeholder="Ex: Modification menu, Maintenance mensuelle..."
+          />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>N° de facture</label>
+            <input
+              type="text"
+              value={invoiceForm.invoice_number}
+              onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })}
+              placeholder="FAC-001"
+            />
+          </div>
+          <div className="form-group">
+            <label>Montant *</label>
+            <input
+              type="number"
+              step="0.01"
+              value={invoiceForm.amount}
+              onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Catégorie</label>
+            <select
+              value={invoiceForm.category}
+              onChange={(e) => setInvoiceForm({ ...invoiceForm, category: e.target.value })}
+            >
+              <option value="modification">Modification</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="hebergement">Hébergement</option>
+              <option value="seo">SEO</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Statut</label>
+            <select
+              value={invoiceForm.status}
+              onChange={(e) => setInvoiceForm({ ...invoiceForm, status: e.target.value })}
+            >
+              <option value="en_attente">En attente</option>
+              <option value="payee">Payée</option>
+              <option value="annulee">Annulée</option>
+            </select>
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Date de facturation</label>
+            <input
+              type="date"
+              value={invoiceForm.invoice_date}
+              onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_date: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label>Date d'échéance</label>
+            <input
+              type="date"
+              value={invoiceForm.due_date}
+              onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="form-group">
+          <label>Description</label>
+          <textarea
+            value={invoiceForm.description}
+            onChange={(e) => setInvoiceForm({ ...invoiceForm, description: e.target.value })}
+            rows="3"
+            placeholder="Détails de la prestation..."
+          />
+        </div>
+      </Modal>
     </div>
   );
 };

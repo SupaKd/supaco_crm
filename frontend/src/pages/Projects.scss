@@ -259,3 +259,99 @@
     }
   }
 }
+
+// Loading state
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+
+// Pagination
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+  padding: 16px 0;
+  flex-wrap: wrap;
+
+  @media (max-width: $mobile) {
+    gap: 6px;
+  }
+
+  .pagination-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: $transition;
+
+    &:hover:not(:disabled) {
+      border-color: $primary-color;
+      color: $primary-color;
+      background-color: var(--hover-bg);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .pagination-pages {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .pagination-page {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: $transition;
+
+    &:hover:not(.active) {
+      border-color: $primary-color;
+      color: $primary-color;
+      background-color: var(--hover-bg);
+    }
+
+    &.active {
+      background-color: $primary-color;
+      border-color: $primary-color;
+      color: white;
+    }
+  }
+
+  .pagination-ellipsis {
+    padding: 0 8px;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .pagination-info {
+    margin-left: 16px;
+    font-size: 14px;
+    color: var(--text-secondary);
+
+    @media (max-width: $mobile) {
+      display: none;
+    }
+  }
+}

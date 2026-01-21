@@ -10,6 +10,7 @@ const tagRoutes = require('./routes/tags');
 const quicknoteRoutes = require('./routes/quicknotes');
 const attachmentRoutes = require('./routes/attachments');
 const prospectRoutes = require('./routes/prospects');
+const invoiceRoutes = require('./routes/invoices');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/api/tags', tagRoutes);
 app.use('/api/quicknotes', quicknoteRoutes);
 app.use('/api/attachments', attachmentRoutes);
 app.use('/api/prospects', prospectRoutes);
+app.use('/api/invoices', invoiceRoutes);
 
 // Route de test
 app.get('/', (req, res) => {

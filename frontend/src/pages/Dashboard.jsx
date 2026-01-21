@@ -5,8 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Loader from '../components/Loader';
 import QuickNotes from '../components/QuickNotes';
 import {
-  BarChart3, FileText, Settings, CheckCircle2, User, DollarSign,
-  Calendar, Plus, Folder, AlertTriangle, Clock, ArrowRight
+  BarChart3, Calendar, Plus, Folder, AlertTriangle, Clock, ArrowRight, Instagram, Globe
 } from 'lucide-react';
 import './Dashboard.scss';
 
@@ -185,70 +184,27 @@ const Dashboard = () => {
         </div>
         <div className="widgets-right">
           <QuickNotes />
-        </div>
+        <div className="dashboard-social-links">
+            <a 
+              href="https://instagram.com/supa_c0" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              title="Suivez-nous sur Instagram"
+              >
+              <Instagram size={32} />
+            </a>
+            <a 
+              href="https://supaco-digital.com/" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              title="Visitez notre site web"
+              >
+              <Globe size={32} />
+            </a>
+              </div>
+          </div>
       </div>
 
-      {/* Recent Projects */}
-      <div className="recent-projects">
-        <div className="section-header">
-          <h2>Projets récents</h2>
-          <Link to="/projects" className="view-all">Voir tout</Link>
-        </div>
-
-        {projects.length === 0 ? (
-          <div className="empty-state">
-            <h3>Aucun projet</h3>
-            <p>Commencez par créer votre premier projet</p>
-            <Link to="/projects/new" className="btn btn-primary" style={{ marginTop: '16px' }}>
-              Créer un projet
-            </Link>
-          </div>
-        ) : (
-          <div className="projects-grid">
-            {projects.slice(0, 6).map((project) => (
-              <Link to={`/projects/${project.id}`} key={project.id} className="project-card">
-                <div className="project-header">
-                  <h3>{project.name}</h3>
-                  <span className={`badge badge-${project.status}`}>
-                    {project.status === 'devis' ? 'Devis' :
-                     project.status === 'en_cours' ? 'En cours' :
-                     project.status === 'termine' ? 'Terminé' : 'Annulé'}
-                  </span>
-                </div>
-                {project.tags && project.tags.length > 0 && (
-                  <div className="project-tags">
-                    {project.tags.slice(0, 3).map(tag => (
-                      <span
-                        key={tag.id}
-                        className="project-tag"
-                        style={{ backgroundColor: tag.color }}
-                      >
-                        {tag.name}
-                      </span>
-                    ))}
-                    {project.tags.length > 3 && (
-                      <span className="project-tag more">+{project.tags.length - 3}</span>
-                    )}
-                  </div>
-                )}
-                <p className="project-client">
-                  <User size={16} /> {project.client_name}
-                </p>
-                {project.budget && (
-                  <p className="project-budget">
-                    <DollarSign size={16} /> {project.budget}€
-                  </p>
-                )}
-                {project.deadline && (
-                  <p className="project-deadline">
-                    <Calendar size={16} /> {new Date(project.deadline).toLocaleDateString('fr-FR')}
-                  </p>
-                )}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 };

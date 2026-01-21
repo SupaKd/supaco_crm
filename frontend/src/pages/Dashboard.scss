@@ -385,3 +385,56 @@
     margin-bottom: 6px;
   }
 }
+
+/* Ajout pour les liens réseaux sociaux */
+.dashboard-social-links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-top: 20px;
+  padding: 16px;
+  background-color: #ffffff; /* Fond blanc par défaut */
+  border-radius: 12px;
+  border: 1px solid #e2e8f0; /* Couleur de bordure gris clair */
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+
+  a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b; /* Couleur grise pour les icônes */
+    transition: all 0.2s ease-in-out;
+    padding: 8px;
+    border-radius: 50%;
+
+    &:hover {
+      transform: translateY(-3px); /* Petit saut au survol */
+      background-color: #f8fafc; /* Léger fond gris au survol */
+      
+      /* Couleur spécifique Instagram au survol */
+      &[title*="Instagram"] {
+        color: #e1306c;
+      }
+      
+      /* Couleur spécifique Site Web au survol */
+      &[title*="site web"] {
+        color: #3b82f6;
+      }
+    }
+  }
+}
+
+/* Adaptation pour le mode sombre si présent via les variables CSS natives */
+[data-theme='dark'] .dashboard-social-links {
+  background-color: #1e293b;
+  border-color: #334155;
+  
+  a {
+    color: #94a3b8;
+    
+    &:hover {
+      background-color: #334155;
+    }
+  }
+}

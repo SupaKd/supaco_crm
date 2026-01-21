@@ -6,12 +6,46 @@ const authMiddleware = require('../middleware/auth');
 // Toutes les routes nécessitent l'authentification
 router.use(authMiddleware);
 
-// Récupérer tous les projets de l'utilisateur avec leurs tags
+// Récupérer tous les projets de l'utilisateur avec leurs tags (avec pagination)
 router.get('/', async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || '';
+    const status = req.query.status || '';
+    const tagId = req.query.tagId || '';
+
+    // Construire la requête avec filtres
+    let whereClause = 'WHERE p.user_id = ?';
+    let params = [req.userId];
+
+    if (search) {
+      whereClause += ' AND (p.name LIKE ? OR p.client_name LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    if (status) {
+      whereClause += ' AND p.status = ?';
+      params.push(status);
+    }
+
+    if (tagId) {
+      whereClause += ' AND p.id IN (SELECT project_id FROM project_tags WHERE tag_id = ?)';
+      params.push(tagId);
+    }
+
+    // Compter le total
+    const [countResult] = await db.query(
+      `SELECT COUNT(DISTINCT p.id) as total FROM projects p ${whereClause}`,
+      params
+    );
+    const total = countResult[0].total;
+
+    // Récupérer les projets paginés
     const [projects] = await db.query(
-      'SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC',
-      [req.userId]
+      `SELECT p.* FROM projects p ${whereClause} ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
 
     // Récupérer les tags pour chaque projet
@@ -28,7 +62,15 @@ router.get('/', async (req, res) => {
       })
     );
 
-    res.json(projectsWithTags);
+    res.json({
+      data: projectsWithTags,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     console.error('Erreur récupération projets:', error);
     res.status(500).json({ message: 'Erreur serveur' });
