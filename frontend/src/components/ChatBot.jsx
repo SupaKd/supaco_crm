@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { aiAPI } from '../services/api';
-import { MessageCircle, X, Send, Bot, User, Sparkles, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Sparkles, Loader2, Check, XCircle } from 'lucide-react';
 import './ChatBot.scss';
 
 const ChatBot = () => {
@@ -10,16 +10,16 @@ const ChatBot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [conversationHistory, setConversationHistory] = useState([]);
+  const [pendingAction, setPendingAction] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       loadSuggestions();
-      // Message de bienvenue
       setMessages([{
         role: 'assistant',
-        content: 'Bonjour ! Je suis votre assistant IA Supaco. Je peux vous aider à analyser vos projets, prospects et vous donner des conseils. Que puis-je faire pour vous ?'
+        content: 'Bonjour ! Je suis votre assistant IA Supaco. Je peux créer des projets, des prospects, ajouter des tâches et bien plus. Que puis-je faire pour vous ?'
       }]);
     }
   }, [isOpen]);
@@ -29,10 +29,10 @@ const ChatBot = () => {
   }, [messages]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && inputRef.current && !pendingAction) {
       inputRef.current.focus();
     }
-  }, [isOpen]);
+  }, [isOpen, pendingAction]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -54,12 +54,18 @@ const ChatBot = () => {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+    setPendingAction(null);
 
     try {
       const response = await aiAPI.chat(messageText, conversationHistory);
       const assistantMessage = { role: 'assistant', content: response.data.response };
       setMessages(prev => [...prev, assistantMessage]);
       setConversationHistory(response.data.conversationHistory);
+
+      // Si une action est en attente de confirmation
+      if (response.data.pendingAction) {
+        setPendingAction(response.data.pendingAction);
+      }
     } catch (error) {
       console.error('Erreur chat:', error);
       const errorMessage = error.response?.data?.message || 'Désolé, une erreur est survenue. Vérifiez que la clé API Groq est configurée.';
@@ -69,7 +75,58 @@ const ChatBot = () => {
     }
   };
 
-  const handleKeyPress = (e) => {
+  const confirmAction = async () => {
+    if (!pendingAction) return;
+
+    setIsLoading(true);
+    setMessages(prev => [...prev, { role: 'user', content: '✓ Confirmé' }]);
+
+    try {
+      const response = await aiAPI.executeAction(pendingAction);
+
+      const resultMessage = {
+        role: 'assistant',
+        content: response.data.success
+          ? `✅ ${response.data.message}`
+          : `❌ ${response.data.message}`,
+        isSuccess: response.data.success,
+        isError: !response.data.success
+      };
+
+      setMessages(prev => [...prev, resultMessage]);
+      setConversationHistory(prev => [
+        ...prev,
+        { role: 'user', content: 'Confirmé' },
+        { role: 'assistant', content: resultMessage.content }
+      ]);
+    } catch (error) {
+      console.error('Erreur exécution action:', error);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: '❌ Erreur lors de l\'exécution de l\'action',
+        isError: true
+      }]);
+    } finally {
+      setPendingAction(null);
+      setIsLoading(false);
+    }
+  };
+
+  const cancelAction = () => {
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: '✗ Annulé' },
+      { role: 'assistant', content: 'Action annulée. Que puis-je faire d\'autre pour vous ?' }
+    ]);
+    setConversationHistory(prev => [
+      ...prev,
+      { role: 'user', content: 'Annulé' },
+      { role: 'assistant', content: 'Action annulée. Que puis-je faire d\'autre pour vous ?' }
+    ]);
+    setPendingAction(null);
+  };
+
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -86,6 +143,7 @@ const ChatBot = () => {
       content: 'Conversation réinitialisée. Comment puis-je vous aider ?'
     }]);
     setConversationHistory([]);
+    setPendingAction(null);
   };
 
   return (
@@ -106,7 +164,7 @@ const ChatBot = () => {
           <div className="chatbot-header">
             <div className="chatbot-title">
               <Bot size={20} />
-              <span>Assitant Supaco</span>
+              <span>Assistant Supaco</span>
               <Sparkles size={14} className="sparkle" />
             </div>
             <button className="clear-btn" onClick={clearChat} title="Nouvelle conversation">
@@ -118,7 +176,7 @@ const ChatBot = () => {
             {messages.map((message, index) => (
               <div
                 key={index}
-                className={`message ${message.role} ${message.isError ? 'error' : ''}`}
+                className={`message ${message.role} ${message.isError ? 'error' : ''} ${message.isSuccess ? 'success' : ''}`}
               >
                 <div className="message-avatar">
                   {message.role === 'assistant' ? <Bot size={16} /> : <User size={16} />}
@@ -144,8 +202,22 @@ const ChatBot = () => {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Boutons de confirmation d'action */}
+          {pendingAction && !isLoading && (
+            <div className="action-confirmation">
+              <button className="confirm-btn" onClick={confirmAction}>
+                <Check size={16} />
+                Confirmer
+              </button>
+              <button className="cancel-btn" onClick={cancelAction}>
+                <XCircle size={16} />
+                Annuler
+              </button>
+            </div>
+          )}
+
           {/* Suggestions */}
-          {messages.length <= 1 && suggestions.length > 0 && (
+          {messages.length <= 1 && suggestions.length > 0 && !pendingAction && (
             <div className="chatbot-suggestions">
               {suggestions.slice(0, 4).map((suggestion, index) => (
                 <button
@@ -165,14 +237,14 @@ const ChatBot = () => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Posez votre question..."
-              disabled={isLoading}
+              onKeyDown={handleKeyDown}
+              placeholder={pendingAction ? "Confirmez ou annulez l'action..." : "Posez votre question..."}
+              disabled={isLoading || pendingAction}
             />
             <button
               className="send-btn"
               onClick={() => sendMessage()}
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || pendingAction}
             >
               <Send size={18} />
             </button>

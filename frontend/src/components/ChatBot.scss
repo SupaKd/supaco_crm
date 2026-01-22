@@ -245,6 +245,59 @@
   }
 }
 
+// Boutons de confirmation d'action
+.action-confirmation {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-color);
+  border-top: 1px solid var(--border-color);
+  justify-content: center;
+
+  .confirm-btn,
+  .cancel-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+
+  .confirm-btn {
+    background: #10b981;
+    color: white;
+
+    &:hover {
+      background: #059669;
+      transform: translateY(-1px);
+    }
+  }
+
+  .cancel-btn {
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+
+    &:hover {
+      background: rgba($danger-color, 0.1);
+      color: $danger-color;
+      border-color: $danger-color;
+    }
+  }
+}
+
+// Message success
+.message.assistant.success .message-content {
+  background: rgba(#10b981, 0.1);
+  border-color: rgba(#10b981, 0.3);
+  color: #059669;
+}
+
 // Suggestions
 .chatbot-suggestions {
   display: flex;

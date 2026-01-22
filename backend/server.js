@@ -59,7 +59,7 @@ app.use(cors(corsOptions));
 // Rate Limiting - Global (100 requêtes par 15 minutes par IP)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 1000,
   message: { message: 'Trop de requêtes, veuillez réessayer plus tard' },
   standardHeaders: true,
   legacyHeaders: false,

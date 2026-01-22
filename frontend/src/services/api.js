@@ -135,6 +135,7 @@ export const invoicesAPI = {
 // Assistant IA
 export const aiAPI = {
   chat: (message, conversationHistory = []) => api.post('/ai/chat', { message, conversationHistory }),
+  executeAction: (action) => api.post('/ai/execute-action', { action }),
   getSuggestions: () => api.get('/ai/suggestions')
 };
 
