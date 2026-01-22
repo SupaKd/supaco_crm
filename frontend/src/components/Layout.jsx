@@ -9,6 +9,7 @@ import {
   Moon,
   Users,
 } from "lucide-react";
+import ChatBot from "./ChatBot";
 import "./Layout.scss";
 
 const Layout = ({ children }) => {
@@ -95,6 +96,9 @@ const Layout = ({ children }) => {
 
       {/* Main Content */}
       <main className="main-content">{children}</main>
+
+      {/* Assistant IA */}
+      <ChatBot />
     </div>
   );
 };

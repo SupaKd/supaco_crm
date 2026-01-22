@@ -132,4 +132,10 @@ export const invoicesAPI = {
   delete: (id) => api.delete(`/invoices/${id}`)
 };
 
+// Assistant IA
+export const aiAPI = {
+  chat: (message, conversationHistory = []) => api.post('/ai/chat', { message, conversationHistory }),
+  getSuggestions: () => api.get('/ai/suggestions')
+};
+
 export default api;
