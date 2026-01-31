@@ -64,11 +64,50 @@ const Dashboard = () => {
         </Link>
       </div>
 
-      
+      {/* Stats Cards */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon" style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)' }}>
+            <Folder size={24} color="#6366f1" />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Total projets</span>
+            <span className="stat-value">{stats.total}</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ backgroundColor: 'rgba(251, 146, 60, 0.1)' }}>
+            <AlertTriangle size={24} color="#fb923c" />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Devis</span>
+            <span className="stat-value">{stats.devis}</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
+            <Clock size={24} color="#3b82f6" />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">En cours</span>
+            <span className="stat-value">{stats.en_cours}</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)' }}>
+            <BarChart3 size={24} color="#22c55e" />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Terminés</span>
+            <span className="stat-value">{stats.termine}</span>
+          </div>
+        </div>
+      </div>
 
-      {/* Actions & Deadlines Section */}
-      <div className="dashboard-widgets">
-        <div className="widgets-left">
+      {/* Main Content Grid */}
+      <div className="dashboard-grid">
+        {/* Left Column */}
+        <div className="dashboard-main">
           {/* Actions rapides */}
           <div className="quick-actions">
             <h3>Actions rapides</h3>
@@ -100,7 +139,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Deadlines du jour / à venir */}
+          {/* Deadlines à venir */}
           <div className="today-deadlines">
             <h3>
               <Clock size={18} />
@@ -184,27 +223,93 @@ const Dashboard = () => {
             })()}
           </div>
         </div>
-        <div className="widgets-right">
-          <QuickNotes />
-        <div className="dashboard-social-links">
-            <a 
-              href="https://instagram.com/supa_c0" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              title="Suivez-nous sur Instagram"
-              >
-              <Instagram size={32} />
-            </a>
-            <a 
-              href="https://supaco-digital.com/" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              title="Visitez notre site web"
-              >
-              <Globe size={32} />
-            </a>
+
+        {/* Right Sidebar */}
+        <div className="dashboard-sidebar">
+          {/* Statistiques du mois */}
+          <div className="stats-widget">
+            <h3>Statistiques du mois</h3>
+            <div className="stats-overview">
+              <div className="stat-item">
+                <div className="stat-circle devis">
+                  <span>{stats.devis}</span>
+                </div>
+                <div className="stat-details">
+                  <span className="stat-label">Devis en attente</span>
+                  <span className="stat-percentage">{stats.total > 0 ? Math.round((stats.devis / stats.total) * 100) : 0}%</span>
+                </div>
               </div>
+              <div className="stat-item">
+                <div className="stat-circle en-cours">
+                  <span>{stats.en_cours}</span>
+                </div>
+                <div className="stat-details">
+                  <span className="stat-label">En cours</span>
+                  <span className="stat-percentage">{stats.total > 0 ? Math.round((stats.en_cours / stats.total) * 100) : 0}%</span>
+                </div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-circle termine">
+                  <span>{stats.termine}</span>
+                </div>
+                <div className="stat-details">
+                  <span className="stat-label">Terminés</span>
+                  <span className="stat-percentage">{stats.total > 0 ? Math.round((stats.termine / stats.total) * 100) : 0}%</span>
+                </div>
+              </div>
+            </div>
+            <div className="progress-bar-container">
+              <div className="progress-label">
+                <span>Taux de complétion</span>
+                <span className="progress-value">{stats.total > 0 ? Math.round((stats.termine / stats.total) * 100) : 0}%</span>
+              </div>
+              <div className="progress-bar">
+                <div
+                  className="progress-fill"
+                  style={{ width: `${stats.total > 0 ? (stats.termine / stats.total) * 100 : 0}%` }}
+                ></div>
+              </div>
+            </div>
           </div>
+
+          {/* Notes rapides */}
+          <QuickNotes />
+
+          {/* Liens sociaux professionnels */}
+          <div className="professional-links">
+            <h3>Restons connectés</h3>
+            <div className="links-container">
+              <a
+                href="https://instagram.com/supa_c0"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="social-link instagram"
+              >
+                <div className="link-icon">
+                  <Instagram size={20} />
+                </div>
+                <div className="link-content">
+                  <span className="link-title">Instagram</span>
+                  <span className="link-subtitle">@supa_c0</span>
+                </div>
+              </a>
+              <a
+                href="https://supaco-digital.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="social-link website"
+              >
+                <div className="link-icon">
+                  <Globe size={20} />
+                </div>
+                <div className="link-content">
+                  <span className="link-title">Site Web</span>
+                  <span className="link-subtitle">supaco-digital.com</span>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>

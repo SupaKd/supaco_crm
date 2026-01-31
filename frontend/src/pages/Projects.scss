@@ -1,7 +1,7 @@
 @import '../styles/variables';
 
 .projects-page {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -9,7 +9,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 
   @media (max-width: $mobile) {
     flex-direction: column;
@@ -17,16 +17,36 @@
     gap: 16px;
   }
 
-  h1 {
-    font-size: 28px;
-    font-weight: 700;
-    margin-bottom: 4px;
-    color: var(--text-primary);
-  }
+  .header-content {
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
 
-  p {
-    color: var(--text-secondary);
-    font-size: 14px;
+    .header-subtitle {
+      color: var(--text-secondary);
+      font-size: 15px;
+      font-weight: 500;
+    }
+  }
+}
+
+// Section de contrôle avec recherche et filtres
+.controls-section {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: $transition;
+
+  @media (max-width: $mobile) {
+    padding: 16px;
   }
 }
 
@@ -34,17 +54,15 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background-color: var(--card-bg);
+  background-color: var(--bg-elevated);
   padding: 12px 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  margin-bottom: 24px;
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
   transition: $transition;
 
   &:focus-within {
     border-color: $primary-color;
-    // Utilisation de la couleur primaire pour l'ombre de focus
-    box-shadow: 0 0 0 3px rgba($primary-color, 0.15);
+    box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
   }
 
   svg {
@@ -56,7 +74,7 @@
     flex: 1;
     border: none;
     outline: none;
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text-primary);
     background: transparent;
 
@@ -64,46 +82,63 @@
       color: var(--text-secondary);
     }
   }
-}
 
-.filters {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-
-  .filter-btn {
-    padding: 8px 16px;
-    border-radius: 20px;
-    background-color: var(--bg-elevated); // Plus visible sur le fond en dark mode
-    border: 1px solid var(--border-color);
+  .clear-search {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 50%;
+    background: var(--hover-bg);
     color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 500;
-    transition: $transition;
     cursor: pointer;
+    transition: $transition;
 
     &:hover {
-      border-color: $primary-color;
-      color: $primary-color;
-      background-color: var(--hover-bg);
-    }
-
-    &.active {
-      background-color: $primary-color;
-      border-color: $primary-color;
-      color: white;
+      background: rgba($danger-color, 0.1);
+      color: $danger-color;
     }
   }
 }
 
-.tag-filters {
-  background-color: var(--card-bg);
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  padding: 16px;
-  margin-bottom: 24px;
+.status-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  background-color: var(--bg-elevated);
+  border: 2px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
   transition: $transition;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: $primary-color;
+    color: $primary-color;
+    background-color: rgba($primary-color, 0.05);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    background-color: $primary-color;
+    border-color: $primary-color;
+    color: white;
+    box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+  }
+}
+
+.tag-filters-section {
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
 
   .tag-filters-header {
     display: flex;
@@ -116,26 +151,27 @@
       align-items: center;
       gap: 8px;
       font-size: 14px;
-      font-weight: 500;
-      color: var(--text-secondary);
+      font-weight: 600;
+      color: var(--text-primary);
     }
 
     .clear-tags-btn {
       display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
-      border-radius: 4px;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
       border: none;
-      // Adaptation pour le Dark Mode (opacité plus forte pour lisibilité)
-      background-color: rgba($danger-color, 0.15);
+      background-color: rgba($danger-color, 0.1);
       color: $danger-color;
-      font-size: 12px;
+      font-size: 13px;
+      font-weight: 500;
       cursor: pointer;
       transition: $transition;
 
       &:hover {
-        background-color: rgba($danger-color, 0.25);
+        background-color: rgba($danger-color, 0.2);
+        transform: translateY(-1px);
       }
     }
   }
@@ -146,116 +182,189 @@
     gap: 8px;
 
     .tag-filter-btn {
-      padding: 6px 14px;
+      padding: 8px 16px;
       border-radius: 20px;
       border: 2px solid;
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
       background-color: transparent;
       transition: $transition;
 
       &:hover {
-        opacity: 0.8;
-        transform: translateY(-1px);
+        opacity: 0.85;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       }
 
       &.active {
-        box-shadow: var(--shadow-sm);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
       }
     }
   }
 }
 
-.projects-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.project-item {
+// Style du tableau
+.projects-table-wrapper {
   background-color: var(--card-bg);
   border-radius: 12px;
-  padding: 20px;
   border: 1px solid var(--border-color);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
   transition: $transition;
-  cursor: pointer;
 
   @media (max-width: $mobile) {
-    padding: 16px;
+    overflow-x: auto;
   }
+}
 
-  &:hover {
-    box-shadow: var(--shadow-md);
-    border-color: $primary-color;
-    background-color: var(--bg-elevated); // Léger soulèvement au survol
-  }
+.projects-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
 
-  .project-main {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 12px;
-    gap: 16px;
+  thead {
+    background: linear-gradient(to bottom, var(--bg-elevated), var(--card-bg));
+    border-bottom: 2px solid var(--border-color);
 
-    @media (max-width: $mobile) {
-      flex-direction: column;
-      gap: 12px;
-    }
+    th {
+      padding: 18px 16px;
+      text-align: left;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      white-space: nowrap;
 
-    .project-info {
-      flex: 1;
+      &.sortable {
+        cursor: pointer;
+        user-select: none;
+        transition: $transition;
 
-      h3 {
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 6px;
+        &:hover {
+          background-color: var(--hover-bg);
+          color: $primary-color;
 
-        @media (max-width: $mobile) {
-          font-size: 16px;
+          .sort-icon-inactive {
+            opacity: 0.6;
+          }
+        }
+
+        .th-content {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          svg {
+            flex-shrink: 0;
+            transition: $transition;
+          }
+
+          .sort-icon-inactive {
+            opacity: 0.3;
+          }
         }
       }
 
-      .client-name {
-        font-size: 14px;
-        color: var(--text-secondary);
+      &.actions-column {
+        text-align: center;
       }
     }
   }
 
-  .project-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 12px;
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--border-color);
+      transition: $transition;
 
-    .project-tag {
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 500;
-      color: white;
-      // Ajout d'une légère bordure en dark mode pour que les tags foncés ne disparaissent pas
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-  }
+      &.clickable-row {
+        cursor: pointer;
+      }
 
-  .project-details {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
+      &:hover {
+        background-color: var(--hover-bg);
+        box-shadow: inset 0 0 0 1px rgba($primary-color, 0.1);
+      }
 
-    @media (max-width: $mobile) {
-      gap: 12px;
-    }
+      &:last-child {
+        border-bottom: none;
+      }
 
-    .detail-item {
-      font-size: 13px;
-      color: var(--text-secondary);
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      td {
+        padding: 18px 16px;
+        color: var(--text-primary);
+        vertical-align: middle;
+
+        &.project-name {
+          font-weight: 700;
+          color: var(--text-primary);
+          font-size: 15px;
+        }
+
+        .client-cell,
+        .budget-cell,
+        .date-cell {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+
+          svg {
+            color: var(--text-secondary);
+            flex-shrink: 0;
+          }
+        }
+
+        .no-data {
+          color: var(--text-secondary);
+          font-style: italic;
+          opacity: 0.6;
+        }
+
+        .tags-cell {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+
+          .table-tag {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+          }
+        }
+
+        &.actions-cell {
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+
+          .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: $transition;
+
+            &:hover {
+              border-color: $primary-color;
+              color: $primary-color;
+              background-color: rgba($primary-color, 0.1);
+              transform: translateY(-1px);
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -352,6 +461,114 @@
 
     @media (max-width: $mobile) {
       display: none;
+    }
+  }
+}
+
+// Édition inline dans le tableau
+.projects-table {
+  tbody {
+    td.editable-cell {
+      padding: 0;
+
+      .view-cell {
+        padding: 16px 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+        transition: $transition;
+
+        &:hover {
+          background-color: var(--hover-bg);
+
+          .edit-icon {
+            opacity: 1;
+          }
+        }
+
+        .edit-icon {
+          opacity: 0;
+          color: var(--text-secondary);
+          flex-shrink: 0;
+          margin-left: auto;
+          transition: $transition;
+        }
+      }
+
+      .inline-edit-table {
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        input,
+        select {
+          flex: 1;
+          padding: 6px 10px;
+          border: 1px solid var(--border-color);
+          border-radius: 6px;
+          font-size: 13px;
+          background: var(--input-bg);
+          color: var(--text-primary);
+          min-width: 0;
+
+          &:focus {
+            outline: none;
+            border-color: $primary-color;
+            box-shadow: 0 0 0 2px rgba($primary-color, 0.1);
+          }
+        }
+
+        select {
+          cursor: pointer;
+        }
+
+        .inline-actions {
+          display: flex;
+          gap: 4px;
+          flex-shrink: 0;
+
+          button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: $transition;
+
+            &:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
+
+            &.btn-save {
+              background: $success-color;
+              color: white;
+
+              &:hover:not(:disabled) {
+                background: darken($success-color, 5%);
+              }
+            }
+
+            &.btn-cancel {
+              background: var(--card-bg);
+              color: var(--text-secondary);
+              border: 1px solid var(--border-color);
+
+              &:hover {
+                background: var(--hover-bg);
+                color: $danger-color;
+                border-color: $danger-color;
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

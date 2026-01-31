@@ -45,6 +45,7 @@ const ProjectDetails = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
+  const [editingField, setEditingField] = useState(null);
 
   // Formulaire du projet
   const [formData, setFormData] = useState({
@@ -159,6 +160,35 @@ const ProjectDetails = () => {
       setIsEditing(false);
       await fetchProjectData();
       toast.success('Projet mis à jour avec succès');
+    } catch (err) {
+      console.error('Erreur sauvegarde:', err);
+      const errorMsg = err.response?.data?.message || 'Erreur lors de la sauvegarde';
+      setError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveField = async (fieldName) => {
+    try {
+      setSaving(true);
+      setError('');
+
+      const projectData = {
+        ...formData,
+        budget: formData.budget ? parseFloat(formData.budget) : null,
+        deadline: formData.deadline || null,
+        client_email: formData.client_email || null,
+        client_phone: formData.client_phone || null,
+        website_url: formData.website_url || null,
+        description: formData.description || null
+      };
+
+      await projectsAPI.update(id, projectData);
+      setEditingField(null);
+      await fetchProjectData();
+      toast.success('Mis à jour');
     } catch (err) {
       console.error('Erreur sauvegarde:', err);
       const errorMsg = err.response?.data?.message || 'Erreur lors de la sauvegarde';
@@ -541,41 +571,36 @@ const ProjectDetails = () => {
       <div className="tab-content">
         {activeTab === 'details' && (
           <div className="details-tab">
-            <div className="form-section">
-              <h2>Informations du projet</h2>
-
-              <div className="form-group">
-                <label>Nom du projet</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                  />
-                ) : (
-                  <p className="form-value">{project?.name}</p>
-                )}
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Statut</label>
+            {/* Cards récapitulatives */}
+            <div className="details-cards">
+              <div className="detail-card">
+                <div className="card-icon status">
+                  {project?.status === 'devis' && <FileText size={20} />}
+                  {project?.status === 'en_cours' && <Clock size={20} />}
+                  {project?.status === 'termine' && <CheckCircle2 size={20} />}
+                  {project?.status === 'annule' && <X size={20} />}
+                </div>
+                <div className="card-content">
+                  <span className="card-label">Statut</span>
                   {isEditing ? (
-                    <select name="status" value={formData.status} onChange={handleChange}>
+                    <select name="status" value={formData.status} onChange={handleChange} className="card-select">
                       <option value="devis">Devis</option>
                       <option value="en_cours">En cours</option>
                       <option value="termine">Terminé</option>
                       <option value="annule">Annulé</option>
                     </select>
                   ) : (
-                    <p className="form-value">{getStatusBadge(project?.status)}</p>
+                    <span className="card-value">{getStatusBadge(project?.status)}</span>
                   )}
                 </div>
+              </div>
 
-                <div className="form-group">
-                  <label>Budget</label>
+              <div className="detail-card">
+                <div className="card-icon budget">
+                  <Euro size={20} />
+                </div>
+                <div className="card-content">
+                  <span className="card-label">Budget</span>
                   {isEditing ? (
                     <input
                       type="number"
@@ -583,118 +608,299 @@ const ProjectDetails = () => {
                       value={formData.budget}
                       onChange={handleChange}
                       step="0.01"
+                      className="card-input"
+                      placeholder="0.00"
                     />
                   ) : (
-                    <p className="form-value">{project?.budget ? `${project.budget}€` : '-'}</p>
+                    <span className="card-value">{project?.budget ? `${project.budget}€` : '-'}</span>
                   )}
                 </div>
+              </div>
 
-                <div className="form-group">
-                  <label>Date limite</label>
+              <div className="detail-card">
+                <div className="card-icon deadline">
+                  <Clock size={20} />
+                </div>
+                <div className="card-content">
+                  <span className="card-label">Date limite</span>
                   {isEditing ? (
                     <input
                       type="date"
                       name="deadline"
                       value={formData.deadline}
                       onChange={handleChange}
+                      className="card-input"
                     />
                   ) : (
-                    <p className="form-value">
+                    <span className="card-value">
                       {project?.deadline ? new Date(project.deadline).toLocaleDateString('fr-FR') : '-'}
-                    </p>
+                    </span>
                   )}
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Description</label>
-                {isEditing ? (
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows="4"
-                  />
-                ) : (
-                  <p className="form-value">{project?.description || '-'}</p>
-                )}
+              <div className="detail-card">
+                <div className="card-icon website">
+                  <ExternalLink size={20} />
+                </div>
+                <div className="card-content">
+                  <span className="card-label">Site web</span>
+                  {isEditing ? (
+                    <input
+                      type="url"
+                      name="website_url"
+                      value={formData.website_url}
+                      onChange={handleChange}
+                      className="card-input"
+                      placeholder="https://..."
+                    />
+                  ) : (
+                    <span className="card-value">
+                      {project?.website_url ? (
+                        <a
+                          href={project.website_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="website-link"
+                        >
+                          Visiter
+                        </a>
+                      ) : '-'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="form-section">
-              <h2>Informations du client</h2>
-
-              <div className="form-group">
-                <label>Nom du client</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="client_name"
-                    value={formData.client_name}
-                    onChange={handleChange}
-                    required
-                  />
-                ) : (
-                  <p className="form-value">{project?.client_name}</p>
-                )}
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Email</label>
-                  {isEditing ? (
-                    <input
-                      type="email"
-                      name="client_email"
-                      value={formData.client_email}
-                      onChange={handleChange}
-                    />
-                  ) : (
-                    <p className="form-value">{project?.client_email || '-'}</p>
-                  )}
-                </div>
-
-                <div className="form-group">
-                  <label>Téléphone</label>
-                  {isEditing ? (
-                    <input
-                      type="tel"
-                      name="client_phone"
-                      value={formData.client_phone}
-                      onChange={handleChange}
-                    />
-                  ) : (
-                    <p className="form-value">{project?.client_phone || '-'}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>URL du site web</label>
-                {isEditing ? (
-                  <input
-                    type="url"
-                    name="website_url"
-                    value={formData.website_url}
-                    onChange={handleChange}
-                    placeholder="https://www.example.com"
-                  />
-                ) : (
-                  <p className="form-value">
-                    {project?.website_url ? (
-                      <a
-                        href={project.website_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="website-link"
-                      >
-                        {project.website_url}
-                        <ExternalLink size={14} />
-                      </a>
-                    ) : '-'}
-                  </p>
-                )}
-              </div>
+            {/* Tableau d'informations */}
+            <div className="details-table-section">
+              <h2>Informations détaillées</h2>
+              <table className="details-table">
+                <tbody>
+                  <tr>
+                    <th>Nom du projet</th>
+                    <td>
+                      {editingField === 'name' ? (
+                        <div className="inline-edit">
+                          <input
+                            type="text"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            required
+                            autoFocus
+                          />
+                          <div className="inline-edit-actions">
+                            <button
+                              className="btn-inline-save"
+                              onClick={() => handleSaveField('name')}
+                              disabled={saving}
+                            >
+                              <CheckCircle2 size={16} />
+                            </button>
+                            <button
+                              className="btn-inline-cancel"
+                              onClick={() => {
+                                setEditingField(null);
+                                setFormData(prev => ({ ...prev, name: project?.name }));
+                              }}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="view-field">
+                          <span>{project?.name}</span>
+                          <button
+                            className="btn-edit-field"
+                            onClick={() => setEditingField('name')}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Description</th>
+                    <td>
+                      {editingField === 'description' ? (
+                        <div className="inline-edit">
+                          <textarea
+                            name="description"
+                            value={formData.description}
+                            onChange={handleChange}
+                            rows="3"
+                            autoFocus
+                          />
+                          <div className="inline-edit-actions">
+                            <button
+                              className="btn-inline-save"
+                              onClick={() => handleSaveField('description')}
+                              disabled={saving}
+                            >
+                              <CheckCircle2 size={16} />
+                            </button>
+                            <button
+                              className="btn-inline-cancel"
+                              onClick={() => {
+                                setEditingField(null);
+                                setFormData(prev => ({ ...prev, description: project?.description }));
+                              }}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="view-field">
+                          <span>{project?.description || '-'}</span>
+                          <button
+                            className="btn-edit-field"
+                            onClick={() => setEditingField('description')}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Client</th>
+                    <td>
+                      {editingField === 'client_name' ? (
+                        <div className="inline-edit">
+                          <input
+                            type="text"
+                            name="client_name"
+                            value={formData.client_name}
+                            onChange={handleChange}
+                            required
+                            autoFocus
+                          />
+                          <div className="inline-edit-actions">
+                            <button
+                              className="btn-inline-save"
+                              onClick={() => handleSaveField('client_name')}
+                              disabled={saving}
+                            >
+                              <CheckCircle2 size={16} />
+                            </button>
+                            <button
+                              className="btn-inline-cancel"
+                              onClick={() => {
+                                setEditingField(null);
+                                setFormData(prev => ({ ...prev, client_name: project?.client_name }));
+                              }}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="view-field">
+                          <span>{project?.client_name}</span>
+                          <button
+                            className="btn-edit-field"
+                            onClick={() => setEditingField('client_name')}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Email du client</th>
+                    <td>
+                      {editingField === 'client_email' ? (
+                        <div className="inline-edit">
+                          <input
+                            type="email"
+                            name="client_email"
+                            value={formData.client_email}
+                            onChange={handleChange}
+                            autoFocus
+                          />
+                          <div className="inline-edit-actions">
+                            <button
+                              className="btn-inline-save"
+                              onClick={() => handleSaveField('client_email')}
+                              disabled={saving}
+                            >
+                              <CheckCircle2 size={16} />
+                            </button>
+                            <button
+                              className="btn-inline-cancel"
+                              onClick={() => {
+                                setEditingField(null);
+                                setFormData(prev => ({ ...prev, client_email: project?.client_email }));
+                              }}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="view-field">
+                          <span>{project?.client_email || '-'}</span>
+                          <button
+                            className="btn-edit-field"
+                            onClick={() => setEditingField('client_email')}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Téléphone du client</th>
+                    <td>
+                      {editingField === 'client_phone' ? (
+                        <div className="inline-edit">
+                          <input
+                            type="tel"
+                            name="client_phone"
+                            value={formData.client_phone}
+                            onChange={handleChange}
+                            autoFocus
+                          />
+                          <div className="inline-edit-actions">
+                            <button
+                              className="btn-inline-save"
+                              onClick={() => handleSaveField('client_phone')}
+                              disabled={saving}
+                            >
+                              <CheckCircle2 size={16} />
+                            </button>
+                            <button
+                              className="btn-inline-cancel"
+                              onClick={() => {
+                                setEditingField(null);
+                                setFormData(prev => ({ ...prev, client_phone: project?.client_phone }));
+                              }}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="view-field">
+                          <span>{project?.client_phone || '-'}</span>
+                          <button
+                            className="btn-edit-field"
+                            onClick={() => setEditingField('client_phone')}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         )}

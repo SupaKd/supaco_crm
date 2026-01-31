@@ -155,7 +155,6 @@ const ChatBot = () => {
         title="Assistant IA"
       >
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
-        {!isOpen && <span className="chatbot-badge">IA</span>}
       </button>
 
       {/* Fenêtre de chat */}

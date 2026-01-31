@@ -1,22 +1,34 @@
 @import '../styles/variables';
 
 .commercial-page {
+  max-width: 1400px;
+  margin: 0 auto;
+
   .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 32px;
 
-    h1 {
-      margin: 0;
-      font-size: 1.75rem;
-      color: var(--text-primary);
+    @media (max-width: $mobile) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
     }
 
-    p {
-      margin: 0.25rem 0 0 0;
-      color: var(--text-secondary);
-      font-size: 0.875rem;
+    .header-content {
+      h1 {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+      }
+
+      .header-subtitle {
+        color: var(--text-secondary);
+        font-size: 15px;
+        font-weight: 500;
+      }
     }
 
     .btn-primary {
@@ -39,233 +51,317 @@
     }
   }
 
-  .kanban-board {
-    display: flex;
-    gap: 1rem;
-    overflow-x: auto;
-    padding-bottom: 1rem;
-    min-height: calc(100vh - 200px);
-
-    &::-webkit-scrollbar {
-      height: 8px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: var(--bg-color);
-      border-radius: 4px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--border-color);
-      border-radius: 4px;
-
-      &:hover {
-        background: var(--text-secondary);
-      }
-    }
-  }
-
-  .kanban-column {
-    flex: 0 0 280px;
-    min-width: 280px;
-    background: var(--card-bg);
-    border-radius: 12px;
+  // Section de contrôle avec recherche et filtres
+  .controls-section {
+    background-color: var(--card-bg);
     border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 200px);
+    gap: 16px;
+    transition: $transition;
 
-    .column-header {
-      padding: 1rem;
-      border-top: 3px solid;
-      border-radius: 12px 12px 0 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--bg-color);
-      border-bottom: 1px solid var(--border-color);
-
-      .column-title {
-        font-weight: 600;
-        font-size: 0.875rem;
-        color: var(--text-primary);
-      }
-
-      .column-count {
-        padding: 0.125rem 0.5rem;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: white;
-      }
-    }
-
-    .column-content {
-      flex: 1;
-      padding: 0.75rem;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-
-      &::-webkit-scrollbar {
-        width: 4px;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: transparent;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: var(--border-color);
-        border-radius: 2px;
-      }
-    }
-
-    .empty-column {
-      text-align: center;
-      padding: 2rem 1rem;
-      color: var(--text-secondary);
-      font-size: 0.8125rem;
+    @media (max-width: $mobile) {
+      padding: 16px;
     }
   }
 
-  .prospect-card {
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 0.75rem;
-    cursor: grab;
-    transition: all 0.2s;
+  .search-bar {
     display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 12px;
+    background-color: var(--bg-elevated);
+    padding: 12px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    transition: $transition;
 
-    &:hover {
-      border-color: var(--text-secondary);
-      box-shadow: var(--shadow-sm);
+    &:focus-within {
+      border-color: $primary-color;
+      box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
     }
 
-    &:active {
-      cursor: grabbing;
-    }
-
-    &.dragging {
-      opacity: 0.5;
-      transform: scale(0.98);
-    }
-
-    .card-drag-handle {
+    svg {
       color: var(--text-secondary);
-      opacity: 0.5;
-      display: flex;
-      align-items: flex-start;
-      padding-top: 2px;
+      flex-shrink: 0;
     }
 
-    .card-content {
+    input {
       flex: 1;
-      min-width: 0;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      color: var(--text-primary);
+      background: transparent;
 
-      .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 0.5rem;
+      &::placeholder {
+        color: var(--text-secondary);
+      }
+    }
 
-        h4 {
-          margin: 0;
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: var(--text-primary);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
+    .clear-search {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: 50%;
+      background: var(--hover-bg);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: $transition;
 
-        .card-actions {
-          display: flex;
-          gap: 0.25rem;
-          opacity: 0;
-          transition: opacity 0.2s;
+      &:hover {
+        background: rgba($danger-color, 0.1);
+        color: $danger-color;
+      }
+    }
+  }
 
-          .action-btn {
-            padding: 0.25rem;
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.2s;
+  .status-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 
-            &:hover {
-              background: var(--hover-bg);
-              color: var(--text-primary);
+    .filter-btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      background-color: var(--bg-elevated);
+      border: 2px solid var(--border-color);
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 600;
+      transition: $transition;
+      cursor: pointer;
+      white-space: nowrap;
+
+      &:hover {
+        border-color: $primary-color;
+        color: $primary-color;
+        background-color: rgba($primary-color, 0.05);
+        transform: translateY(-1px);
+      }
+
+      &.active {
+        background-color: $primary-color;
+        border-color: $primary-color;
+        color: white;
+        box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+      }
+    }
+  }
+
+  // Empty state
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+
+    h3 {
+      font-size: 1.25rem;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+  }
+
+  // Style du tableau
+  .prospects-table-wrapper {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: $transition;
+
+    @media (max-width: $mobile) {
+      overflow-x: auto;
+    }
+  }
+
+  .prospects-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+
+    thead {
+      background: linear-gradient(to bottom, var(--bg-elevated), var(--card-bg));
+      border-bottom: 2px solid var(--border-color);
+
+      th {
+        padding: 18px 16px;
+        text-align: left;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        white-space: nowrap;
+
+        &.sortable {
+          cursor: pointer;
+          user-select: none;
+          transition: $transition;
+
+          &:hover {
+            background-color: var(--hover-bg);
+            color: $primary-color;
+
+            .sort-icon-inactive {
+              opacity: 0.6;
+            }
+          }
+
+          .th-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            svg {
+              flex-shrink: 0;
+              transition: $transition;
             }
 
-            &.delete:hover {
-              color: $danger-color;
+            .sort-icon-inactive {
+              opacity: 0.3;
             }
           }
         }
-      }
 
-      &:hover .card-header .card-actions {
-        opacity: 1;
-      }
-
-      .card-info {
-        display: flex;
-        align-items: center;
-        gap: 0.375rem;
-        font-size: 0.8125rem;
-        color: var(--text-secondary);
-        margin-bottom: 0.375rem;
-
-        svg {
-          flex-shrink: 0;
-        }
-
-        span {
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        &.budget {
-          color: $success-color;
-          font-weight: 500;
+        &.actions-column {
+          text-align: center;
         }
       }
+    }
 
-      .card-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 0.5rem;
-        padding-top: 0.5rem;
-        border-top: 1px solid var(--border-color);
+    tbody {
+      tr {
+        border-bottom: 1px solid var(--border-color);
+        transition: $transition;
 
-        .source-badge {
-          font-size: 0.6875rem;
-          padding: 0.125rem 0.5rem;
-          background: var(--hover-bg);
-          color: var(--text-secondary);
-          border-radius: 4px;
-          text-transform: uppercase;
-          font-weight: 600;
+        &:hover {
+          background-color: var(--hover-bg);
+          box-shadow: inset 0 0 0 1px rgba($primary-color, 0.1);
         }
 
-        .project-link {
-          padding: 0.25rem;
-          background: none;
-          border: none;
-          color: $primary-color;
-          cursor: pointer;
-          border-radius: 4px;
-          transition: all 0.2s;
+        &:last-child {
+          border-bottom: none;
+        }
 
-          &:hover {
-            background: rgba($primary-color, 0.1);
+        td {
+          padding: 18px 16px;
+          color: var(--text-primary);
+          vertical-align: middle;
+
+          &.prospect-name {
+            font-weight: 700;
+            font-size: 15px;
+          }
+
+          .name-cell,
+          .company-cell,
+          .budget-cell {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+
+            svg {
+              color: var(--text-secondary);
+              flex-shrink: 0;
+            }
+          }
+
+          .contact-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+
+            .contact-item {
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              font-size: 13px;
+
+              svg {
+                color: var(--text-secondary);
+                flex-shrink: 0;
+              }
+
+              a {
+                color: var(--text-primary);
+                text-decoration: none;
+
+                &:hover {
+                  color: $primary-color;
+                  text-decoration: underline;
+                }
+              }
+            }
+          }
+
+          .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+          }
+
+          .source-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--hover-bg);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+          }
+
+          .no-data {
+            color: var(--text-secondary);
+            font-style: italic;
+            opacity: 0.6;
+          }
+
+          &.actions-cell {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+
+            .action-btn {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 32px;
+              height: 32px;
+              border-radius: 6px;
+              border: 1px solid var(--border-color);
+              background-color: var(--card-bg);
+              color: var(--text-secondary);
+              cursor: pointer;
+              transition: $transition;
+
+              &:hover {
+                border-color: $primary-color;
+                color: $primary-color;
+                background-color: rgba($primary-color, 0.1);
+                transform: translateY(-1px);
+              }
+
+              &.delete:hover {
+                border-color: $danger-color;
+                color: $danger-color;
+                background-color: rgba($danger-color, 0.1);
+              }
+            }
           }
         }
       }
@@ -285,15 +381,6 @@
         width: 100%;
         justify-content: center;
       }
-    }
-
-    .kanban-board {
-      padding-bottom: 2rem;
-    }
-
-    .kanban-column {
-      flex: 0 0 260px;
-      min-width: 260px;
     }
   }
 }
