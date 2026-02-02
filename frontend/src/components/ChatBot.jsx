@@ -19,7 +19,20 @@ const ChatBot = () => {
       loadSuggestions();
       setMessages([{
         role: 'assistant',
-        content: 'Bonjour ! Je suis votre assistant IA Supaco. Je peux créer des projets, ajouter des tâches et factures, organiser vos projets avec des tags, et bien plus. Comment puis-je vous aider ?'
+        content: `Bonjour ! 👋 Je suis votre assistant IA Supaco.
+
+Je peux vous aider à :
+• 📁 Créer et gérer vos projets
+• ✅ Ajouter des tâches et suivre leur avancement
+• ⏱️ Démarrer des chronomètres pour tracker votre temps
+• 💰 Créer des factures et gérer la facturation
+• 🏷️ Organiser avec des tags
+• 🔍 Utiliser la recherche globale (Ctrl+K)
+• 📊 Consulter vos statistiques de temps
+
+Vous pouvez également utiliser les **actions groupées** pour modifier plusieurs projets ou tâches à la fois.
+
+Comment puis-je vous aider aujourd'hui ?`
       }]);
     }
   }, [isOpen]);

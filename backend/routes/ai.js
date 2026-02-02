@@ -175,6 +175,35 @@ const availableTools = [
         required: ["query"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "start_task_timer",
+      description: "Démarrer le chronomètre pour une tâche spécifique",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Nom du projet contenant la tâche" },
+          task_title: { type: "string", description: "Titre de la tâche" }
+        },
+        required: ["project_name", "task_title"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_time_stats",
+      description: "Obtenir les statistiques de temps pour un projet",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Nom du projet" }
+        },
+        required: ["project_name"]
+      }
+    }
   }
 ];
 
@@ -459,6 +488,109 @@ const executeAction = async (functionName, args, userId) => {
         };
       }
 
+      case 'start_task_timer': {
+        // Trouver le projet
+        const [projects] = await db.query(
+          'SELECT id FROM projects WHERE user_id = ? AND name LIKE ?',
+          [userId, `%${args.project_name}%`]
+        );
+
+        if (projects.length === 0) {
+          return {
+            success: false,
+            message: `Projet "${args.project_name}" non trouvé`
+          };
+        }
+
+        // Trouver la tâche
+        const [tasks] = await db.query(
+          'SELECT id FROM tasks WHERE project_id = ? AND title LIKE ?',
+          [projects[0].id, `%${args.task_title}%`]
+        );
+
+        if (tasks.length === 0) {
+          return {
+            success: false,
+            message: `Tâche "${args.task_title}" non trouvée dans le projet "${args.project_name}"`
+          };
+        }
+
+        // Vérifier qu'il n'y a pas déjà un timer actif
+        const [activeTimers] = await db.query(
+          'SELECT id FROM time_entries WHERE task_id = ? AND ended_at IS NULL',
+          [tasks[0].id]
+        );
+
+        if (activeTimers.length > 0) {
+          return {
+            success: false,
+            message: `Un chronomètre est déjà actif pour la tâche "${args.task_title}"`
+          };
+        }
+
+        // Démarrer le timer
+        const [result] = await db.query(
+          'INSERT INTO time_entries (task_id, user_id, started_at) VALUES (?, ?, NOW())',
+          [tasks[0].id, userId]
+        );
+
+        return {
+          success: true,
+          message: `Chronomètre démarré pour la tâche "${args.task_title}" du projet "${args.project_name}"`,
+          data: { timer_id: result.insertId, task_id: tasks[0].id }
+        };
+      }
+
+      case 'get_time_stats': {
+        // Trouver le projet
+        const [projects] = await db.query(
+          'SELECT id FROM projects WHERE user_id = ? AND name LIKE ?',
+          [userId, `%${args.project_name}%`]
+        );
+
+        if (projects.length === 0) {
+          return {
+            success: false,
+            message: `Projet "${args.project_name}" non trouvé`
+          };
+        }
+
+        // Récupérer les statistiques
+        const [stats] = await db.query(
+          `SELECT
+            t.id,
+            t.title,
+            t.estimated_hours,
+            COUNT(te.id) as session_count,
+            COALESCE(SUM(te.duration), 0) as total_seconds,
+            ROUND(COALESCE(SUM(te.duration), 0) / 3600, 2) as actual_hours
+          FROM tasks t
+          LEFT JOIN time_entries te ON t.id = te.task_id
+          WHERE t.project_id = ?
+          GROUP BY t.id`,
+          [projects[0].id]
+        );
+
+        const totalHours = stats.reduce((sum, task) => sum + parseFloat(task.actual_hours || 0), 0);
+        const totalEstimated = stats.reduce((sum, task) => sum + parseFloat(task.estimated_hours || 0), 0);
+
+        return {
+          success: true,
+          message: `Statistiques de temps pour "${args.project_name}"`,
+          data: {
+            total_hours: totalHours.toFixed(2),
+            total_estimated: totalEstimated.toFixed(2),
+            variance: (totalHours - totalEstimated).toFixed(2),
+            tasks: stats.map(t => ({
+              titre: t.title,
+              estimé: `${t.estimated_hours || 0}h`,
+              réel: `${t.actual_hours}h`,
+              sessions: t.session_count
+            }))
+          }
+        };
+      }
+
       default:
         return { success: false, message: `Action "${functionName}" non reconnue` };
     }
@@ -636,26 +768,49 @@ DEADLINES PROCHES :
 ${JSON.stringify(userContext?.deadlines_proches, null, 2)}
 
 FONCTIONNALITÉS DISPONIBLES :
-- Créer et gérer des projets (avec statuts: devis, en_cours, termine, annule)
-- Ajouter des tâches aux projets (avec priorités: basse, moyenne, haute)
-- Créer des factures annexes pour les projets (modifications, maintenance, hébergement, SEO, etc.)
-- Ajouter des tags/étiquettes aux projets pour mieux les organiser
+
+📁 GESTION DE PROJETS :
+- Créer et gérer des projets (statuts: devis, en_cours, termine, annule)
+- Modifier le statut des projets
+- Organiser avec des tags/étiquettes colorés
+- Actions groupées : changer le statut de plusieurs projets à la fois
+- Recherche globale : retrouver rapidement projets, tâches, clients ou notes (Ctrl+K)
+
+✅ GESTION DES TÂCHES :
+- Ajouter des tâches aux projets (priorités: basse, moyenne, haute)
+- Suivre l'avancement des tâches
+- Actions groupées : modifier ou supprimer plusieurs tâches en une fois
+
+⏱️ SUIVI DU TEMPS :
+- Démarrer/arrêter des chronomètres sur les tâches
+- Consulter les statistiques de temps par projet
+- Comparer temps estimé vs temps réel
+- Voir le nombre de sessions de travail par tâche
+
+💰 FACTURATION :
+- Créer des factures annexes pour les projets (catégories: modification, maintenance, hebergement, seo, autre)
+- Suivre les paiements (statuts: en_attente, payee, annulee)
+
+👥 PROSPECTION COMMERCIALE :
+- Gérer des prospects avec leur statut
+- Suivre l'avancement commercial
+
+📝 ORGANISATION :
 - Ajouter des notes aux projets
-- Rechercher des projets par nom, client ou tag
-- Gérer des prospects et leur statut
-- Changer le statut des projets et prospects
+- Joindre des documents et pièces jointes
+- Recherche globale instantanée dans tout le CRM
 
 INSTRUCTIONS :
 - Réponds toujours en français de manière naturelle et conversationnelle
-- Tu PEUX exécuter des actions : créer, modifier, rechercher, organiser
+- Tu PEUX exécuter des actions : créer, modifier, rechercher, organiser, démarrer des chronomètres
 - Quand l'utilisateur demande de créer ou modifier quelque chose, utilise les fonctions disponibles
 - Si des informations manquent pour une action, demande-les poliment
 - Sois proactif : propose des solutions et des valeurs par défaut raisonnables
 - Pour les dates, utilise le format YYYY-MM-DD
-- Pour les factures, les catégories disponibles sont: modification, maintenance, hebergement, seo, autre
-- Les statuts de facture sont: en_attente, payee, annulee
-- Suggère d'ajouter des tags aux projets pour mieux les organiser
-- Tu peux rechercher des projets pour aider l'utilisateur à retrouver rapidement ses informations`;
+- Suggère d'utiliser le suivi du temps pour mieux estimer les futurs projets
+- Mentionne la recherche globale (Ctrl+K) quand l'utilisateur cherche quelque chose
+- Propose d'ajouter des tags pour organiser les projets similaires
+- Rappelle les actions groupées quand l'utilisateur veut modifier plusieurs éléments`;
 
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -691,7 +846,9 @@ INSTRUCTIONS :
         add_note_to_project: `Ajouter une note au projet "${functionArgs.project_name}"`,
         add_tag_to_project: `Ajouter le tag "${functionArgs.tag_name}" au projet "${functionArgs.project_name}"`,
         create_invoice: `Créer une facture "${functionArgs.title}" de ${functionArgs.amount}€ pour "${functionArgs.project_name}"`,
-        search_projects: `Rechercher des projets avec "${functionArgs.query}"`
+        search_projects: `Rechercher des projets avec "${functionArgs.query}"`,
+        start_task_timer: `Démarrer le chronomètre pour "${functionArgs.task_title}" du projet "${functionArgs.project_name}"`,
+        get_time_stats: `Récupérer les statistiques de temps pour "${functionArgs.project_name}"`
       };
 
       const description = actionDescriptions[functionName] || `Exécuter ${functionName}`;
