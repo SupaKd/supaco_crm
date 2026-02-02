@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import {
@@ -8,14 +9,18 @@ import {
   Sun,
   Moon,
   Users,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import ChatBot from "./ChatBot";
+import GlobalSearch from "./GlobalSearch";
 import "./Layout.scss";
 
 const Layout = ({ children }) => {
   const { logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -25,17 +30,19 @@ const Layout = ({ children }) => {
   return (
     <div className="layout">
       {/* Sidebar Desktop / Bottom Nav Mobile */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-header-top">
-            <img src="/newlogo.png" alt="logo" />
-            <button
-              onClick={toggleTheme}
-              className="theme-toggle"
-              title={isDarkMode ? "Mode clair" : "Mode sombre"}
-            >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
+            <img src="/newlogo.png" alt="logo" className={isCollapsed ? 'logo-small' : ''} />
+            {!isCollapsed && (
+              <button
+                onClick={toggleTheme}
+                className="theme-toggle"
+                title={isDarkMode ? "Mode clair" : "Mode sombre"}
+              >
+                {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+            )}
           </div>
         </div>
 
@@ -92,10 +99,26 @@ const Layout = ({ children }) => {
             <span className="text">Déconnexion</span>
           </button>
         </nav>
+
+        {/* Toggle button for desktop */}
+        <button
+          className="sidebar-toggle"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          title={isCollapsed ? "Agrandir la barre" : "Réduire la barre"}
+        >
+          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+        </button>
       </aside>
 
       {/* Main Content */}
-      <main className="main-content">{children}</main>
+      <main className={`main-content ${isCollapsed ? 'expanded' : ''}`}>
+        {/* Barre de recherche globale */}
+        <div className="global-search-container">
+          <GlobalSearch />
+        </div>
+
+        {children}
+      </main>
 
       {/* Assistant IA */}
       <ChatBot />

@@ -19,7 +19,7 @@ const ChatBot = () => {
       loadSuggestions();
       setMessages([{
         role: 'assistant',
-        content: 'Bonjour ! Je suis votre assistant IA Supaco. Je peux créer des projets, des prospects, ajouter des tâches et bien plus. Que puis-je faire pour vous ?'
+        content: 'Bonjour ! Je suis votre assistant IA Supaco. Je peux créer des projets, ajouter des tâches et factures, organiser vos projets avec des tags, et bien plus. Comment puis-je vous aider ?'
       }]);
     }
   }, [isOpen]);

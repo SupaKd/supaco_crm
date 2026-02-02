@@ -132,17 +132,30 @@ router.post('/', async (req, res) => {
 // Mettre à jour un projet
 router.put('/:id', async (req, res) => {
   try {
-    const { name, client_name, client_email, client_phone, website_url, description, budget, status, deadline } = req.body;
-
     // Vérifier que le projet appartient à l'utilisateur
     const [existingProject] = await db.query(
-      'SELECT id FROM projects WHERE id = ? AND user_id = ?',
+      'SELECT * FROM projects WHERE id = ? AND user_id = ?',
       [req.params.id, req.userId]
     );
 
     if (existingProject.length === 0) {
       return res.status(404).json({ message: 'Projet non trouvé' });
     }
+
+    const currentProject = existingProject[0];
+
+    // Fusionner avec les valeurs existantes pour permettre la mise à jour partielle
+    const {
+      name = currentProject.name,
+      client_name = currentProject.client_name,
+      client_email = currentProject.client_email,
+      client_phone = currentProject.client_phone,
+      website_url = currentProject.website_url,
+      description = currentProject.description,
+      budget = currentProject.budget,
+      status = currentProject.status,
+      deadline = currentProject.deadline
+    } = req.body;
 
     await db.query(
       `UPDATE projects

@@ -139,4 +139,24 @@ export const aiAPI = {
   getSuggestions: () => api.get('/ai/suggestions')
 };
 
+// Time Tracking
+export const timeTrackingAPI = {
+  // Timer management
+  start: (task_id, notes = null) => api.post('/time-tracking/start', { task_id, notes }),
+  stop: (id, notes = null) => api.post(`/time-tracking/stop/${id}`, { notes }),
+  getActive: (taskId) => api.get(`/time-tracking/active/${taskId}`),
+
+  // Time entries
+  getByTask: (taskId) => api.get(`/time-tracking/task/${taskId}`),
+  getByProject: (projectId) => api.get(`/time-tracking/project/${projectId}`),
+  addManual: (data) => api.post('/time-tracking/manual', data),
+  delete: (id) => api.delete(`/time-tracking/${id}`),
+
+  // Estimations
+  updateEstimate: (taskId, estimated_hours) => api.patch(`/time-tracking/estimate/${taskId}`, { estimated_hours }),
+
+  // Statistics
+  getProjectStats: (projectId) => api.get(`/time-tracking/stats/project/${projectId}`)
+};
+
 export default api;

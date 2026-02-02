@@ -29,9 +29,10 @@ const availableTools = [
           client_name: { type: "string", description: "Nom du client" },
           client_email: { type: "string", description: "Email du client (optionnel)" },
           client_phone: { type: "string", description: "Téléphone du client (optionnel)" },
+          website_url: { type: "string", description: "URL du site web du client (optionnel)" },
           description: { type: "string", description: "Description du projet (optionnel)" },
           budget: { type: "number", description: "Budget en euros (optionnel)" },
-          status: { type: "string", enum: ["devis", "en_cours", "termine"], description: "Statut du projet" },
+          status: { type: "string", enum: ["devis", "en_cours", "termine", "annule"], description: "Statut du projet" },
           deadline: { type: "string", description: "Date limite au format YYYY-MM-DD (optionnel)" }
         },
         required: ["name", "client_name"]
@@ -117,10 +118,61 @@ const availableTools = [
         type: "object",
         properties: {
           project_name: { type: "string", description: "Nom du projet" },
-          title: { type: "string", description: "Titre de la note" },
           content: { type: "string", description: "Contenu de la note" }
         },
-        required: ["project_name", "title", "content"]
+        required: ["project_name", "content"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_tag_to_project",
+      description: "Ajouter un tag/étiquette à un projet existant",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Nom du projet" },
+          tag_name: { type: "string", description: "Nom du tag à ajouter" }
+        },
+        required: ["project_name", "tag_name"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_invoice",
+      description: "Créer une facture annexe pour un projet (modifications, maintenance, etc.)",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: { type: "string", description: "Nom du projet" },
+          title: { type: "string", description: "Titre de la facture" },
+          amount: { type: "number", description: "Montant de la facture en euros" },
+          invoice_number: { type: "string", description: "Numéro de facture (optionnel)" },
+          description: { type: "string", description: "Description détaillée (optionnel)" },
+          category: { type: "string", enum: ["modification", "maintenance", "hebergement", "seo", "autre"], description: "Catégorie de la facture" },
+          status: { type: "string", enum: ["en_attente", "payee", "annulee"], description: "Statut de paiement" },
+          invoice_date: { type: "string", description: "Date de facturation au format YYYY-MM-DD (optionnel)" },
+          due_date: { type: "string", description: "Date d'échéance au format YYYY-MM-DD (optionnel)" }
+        },
+        required: ["project_name", "title", "amount"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_projects",
+      description: "Rechercher des projets par nom, client ou tag",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Terme de recherche" },
+          status: { type: "string", enum: ["devis", "en_cours", "termine", "annule"], description: "Filtrer par statut (optionnel)" }
+        },
+        required: ["query"]
       }
     }
   }
@@ -135,13 +187,14 @@ const executeAction = async (functionName, args, userId) => {
     switch (functionName) {
       case 'create_project': {
         const [result] = await db.query(
-          `INSERT INTO projects (name, client_name, client_email, client_phone, description, budget, status, deadline, user_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO projects (name, client_name, client_email, client_phone, website_url, description, budget, status, deadline, user_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             args.name,
             args.client_name,
             args.client_email || null,
             args.client_phone || null,
+            args.website_url || null,
             args.description || null,
             args.budget || null,
             args.status || 'devis',
@@ -193,15 +246,18 @@ const executeAction = async (functionName, args, userId) => {
 
         const projectId = projects[0].id;
 
+        // Mapper la priorité anglaise vers française
+        const priorityMap = { 'low': 'basse', 'medium': 'moyenne', 'high': 'haute' };
+        const priority = priorityMap[args.priority] || 'moyenne';
+
         const [result] = await db.query(
-          `INSERT INTO tasks (project_id, title, description, priority, due_date, status)
-           VALUES (?, ?, ?, ?, ?, 'todo')`,
+          `INSERT INTO tasks (project_id, title, description, priority, status)
+           VALUES (?, ?, ?, ?, 'a_faire')`,
           [
             projectId,
             args.title,
             args.description || null,
-            args.priority || 'medium',
-            args.due_date || null
+            priority
           ]
         );
 
@@ -273,14 +329,133 @@ const executeAction = async (functionName, args, userId) => {
         }
 
         const [result] = await db.query(
-          'INSERT INTO notes (project_id, title, content) VALUES (?, ?, ?)',
-          [projects[0].id, args.title, args.content]
+          'INSERT INTO notes (project_id, content) VALUES (?, ?)',
+          [projects[0].id, args.content]
         );
 
         return {
           success: true,
-          message: `Note "${args.title}" ajoutée au projet "${args.project_name}"`,
+          message: `Note ajoutée au projet "${args.project_name}"`,
           data: { id: result.insertId, project_id: projects[0].id }
+        };
+      }
+
+      case 'add_tag_to_project': {
+        const [projects] = await db.query(
+          'SELECT id FROM projects WHERE name LIKE ? AND user_id = ? LIMIT 1',
+          [`%${args.project_name}%`, userId]
+        );
+
+        if (projects.length === 0) {
+          return { success: false, message: `Projet "${args.project_name}" non trouvé` };
+        }
+
+        // Vérifier si le tag existe, sinon le créer
+        let [tags] = await db.query(
+          'SELECT id FROM tags WHERE name = ? AND user_id = ?',
+          [args.tag_name, userId]
+        );
+
+        let tagId;
+        if (tags.length === 0) {
+          // Créer le tag avec une couleur aléatoire
+          const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+          const randomColor = colors[Math.floor(Math.random() * colors.length)];
+          const [result] = await db.query(
+            'INSERT INTO tags (name, color, user_id) VALUES (?, ?, ?)',
+            [args.tag_name, randomColor, userId]
+          );
+          tagId = result.insertId;
+        } else {
+          tagId = tags[0].id;
+        }
+
+        // Associer le tag au projet
+        await db.query(
+          'INSERT IGNORE INTO project_tags (project_id, tag_id) VALUES (?, ?)',
+          [projects[0].id, tagId]
+        );
+
+        return {
+          success: true,
+          message: `Tag "${args.tag_name}" ajouté au projet "${args.project_name}"`,
+          data: { project_id: projects[0].id, tag_id: tagId }
+        };
+      }
+
+      case 'create_invoice': {
+        const [projects] = await db.query(
+          'SELECT id FROM projects WHERE name LIKE ? AND user_id = ? LIMIT 1',
+          [`%${args.project_name}%`, userId]
+        );
+
+        if (projects.length === 0) {
+          return { success: false, message: `Projet "${args.project_name}" non trouvé` };
+        }
+
+        const [result] = await db.query(
+          `INSERT INTO invoices (project_id, invoice_number, title, description, amount, category, status, invoice_date, due_date)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            projects[0].id,
+            args.invoice_number || null,
+            args.title,
+            args.description || null,
+            args.amount,
+            args.category || 'autre',
+            args.status || 'en_attente',
+            args.invoice_date || new Date().toISOString().split('T')[0],
+            args.due_date || null
+          ]
+        );
+
+        return {
+          success: true,
+          message: `Facture "${args.title}" de ${args.amount}€ créée pour le projet "${args.project_name}"`,
+          data: { id: result.insertId, project_id: projects[0].id, ...args }
+        };
+      }
+
+      case 'search_projects': {
+        let query = `
+          SELECT p.*, GROUP_CONCAT(DISTINCT t.name) as tags
+          FROM projects p
+          LEFT JOIN project_tags pt ON p.id = pt.project_id
+          LEFT JOIN tags t ON pt.tag_id = t.id
+          WHERE p.user_id = ?
+          AND (p.name LIKE ? OR p.client_name LIKE ? OR t.name LIKE ?)
+        `;
+
+        const params = [userId, `%${args.query}%`, `%${args.query}%`, `%${args.query}%`];
+
+        if (args.status) {
+          query += ' AND p.status = ?';
+          params.push(args.status);
+        }
+
+        query += ' GROUP BY p.id ORDER BY p.created_at DESC LIMIT 10';
+
+        const [results] = await db.query(query, params);
+
+        if (results.length === 0) {
+          return {
+            success: true,
+            message: `Aucun projet trouvé pour "${args.query}"`,
+            data: []
+          };
+        }
+
+        return {
+          success: true,
+          message: `${results.length} projet(s) trouvé(s) pour "${args.query}"`,
+          data: results.map(p => ({
+            id: p.id,
+            nom: p.name,
+            client: p.client_name,
+            statut: p.status,
+            budget: p.budget ? `${p.budget}€` : 'Non défini',
+            tags: p.tags || 'Aucun'
+          }))
         };
       }
 
@@ -300,14 +475,33 @@ const executeAction = async (functionName, args, userId) => {
 const getUserContext = async (userId) => {
   try {
     const [projects] = await db.query(
-      `SELECT id, name, client_name, status, budget, deadline, created_at
-       FROM projects WHERE user_id = ? ORDER BY created_at DESC LIMIT 20`,
+      `SELECT p.id, p.name, p.client_name, p.status, p.budget, p.deadline, p.created_at,
+              GROUP_CONCAT(DISTINCT t.name) as tags
+       FROM projects p
+       LEFT JOIN project_tags pt ON p.id = pt.project_id
+       LEFT JOIN tags t ON pt.tag_id = t.id
+       WHERE p.user_id = ?
+       GROUP BY p.id
+       ORDER BY p.created_at DESC LIMIT 20`,
       [userId]
     );
 
     const [prospects] = await db.query(
       `SELECT id, first_name, last_name, company, status, estimated_budget, source
        FROM prospects WHERE user_id = ? ORDER BY updated_at DESC LIMIT 20`,
+      [userId]
+    );
+
+    // Récupérer les statistiques des factures
+    const [invoiceStats] = await db.query(
+      `SELECT
+         COUNT(*) as total_invoices,
+         COALESCE(SUM(amount), 0) as total_amount,
+         COALESCE(SUM(CASE WHEN status = 'payee' THEN amount ELSE 0 END), 0) as paid_amount,
+         COALESCE(SUM(CASE WHEN status = 'en_attente' THEN amount ELSE 0 END), 0) as pending_amount
+       FROM invoices i
+       JOIN projects p ON i.project_id = p.id
+       WHERE p.user_id = ?`,
       [userId]
     );
 
@@ -347,7 +541,8 @@ const getUserContext = async (userId) => {
         client: p.client_name,
         statut: p.status,
         budget: p.budget ? `${p.budget}€` : 'Non défini',
-        deadline: p.deadline ? new Date(p.deadline).toLocaleDateString('fr-FR') : 'Pas de deadline'
+        deadline: p.deadline ? new Date(p.deadline).toLocaleDateString('fr-FR') : 'Pas de deadline',
+        tags: p.tags || 'Aucun tag'
       })),
       prospects: prospects.map(p => ({
         id: p.id,
@@ -370,6 +565,12 @@ const getUserContext = async (userId) => {
           nouveaux: prospectStats[0].nouveau,
           gagnes: prospectStats[0].gagne,
           perdus: prospectStats[0].perdu
+        },
+        factures: {
+          total: invoiceStats[0].total_invoices,
+          montant_total: `${invoiceStats[0].total_amount}€`,
+          montant_paye: `${invoiceStats[0].paid_amount}€`,
+          montant_en_attente: `${invoiceStats[0].pending_amount}€`
         }
       },
       deadlines_proches: upcomingDeadlines.map(d => ({
@@ -425,7 +626,7 @@ DONNÉES ACTUELLES DE L'UTILISATEUR :
 STATISTIQUES :
 ${JSON.stringify(userContext?.statistiques, null, 2)}
 
-PROJETS (${userContext?.projects?.length || 0}) :
+PROJETS RÉCENTS (${userContext?.projects?.length || 0}) :
 ${JSON.stringify(userContext?.projects?.slice(0, 10), null, 2)}
 
 PROSPECTS (${userContext?.prospects?.length || 0}) :
@@ -434,14 +635,27 @@ ${JSON.stringify(userContext?.prospects?.slice(0, 10), null, 2)}
 DEADLINES PROCHES :
 ${JSON.stringify(userContext?.deadlines_proches, null, 2)}
 
+FONCTIONNALITÉS DISPONIBLES :
+- Créer et gérer des projets (avec statuts: devis, en_cours, termine, annule)
+- Ajouter des tâches aux projets (avec priorités: basse, moyenne, haute)
+- Créer des factures annexes pour les projets (modifications, maintenance, hébergement, SEO, etc.)
+- Ajouter des tags/étiquettes aux projets pour mieux les organiser
+- Ajouter des notes aux projets
+- Rechercher des projets par nom, client ou tag
+- Gérer des prospects et leur statut
+- Changer le statut des projets et prospects
+
 INSTRUCTIONS :
-- Réponds toujours en français
-- Tu PEUX exécuter des actions : créer des projets, prospects, tâches, notes, changer des statuts
+- Réponds toujours en français de manière naturelle et conversationnelle
+- Tu PEUX exécuter des actions : créer, modifier, rechercher, organiser
 - Quand l'utilisateur demande de créer ou modifier quelque chose, utilise les fonctions disponibles
 - Si des informations manquent pour une action, demande-les poliment
-- Sois proactif : si l'utilisateur dit "crée un projet pour Jean", demande les détails manquants ou utilise des valeurs par défaut
-- Confirme toujours ce que tu vas faire avant d'exécuter une action importante
-- Pour les dates, utilise le format YYYY-MM-DD`;
+- Sois proactif : propose des solutions et des valeurs par défaut raisonnables
+- Pour les dates, utilise le format YYYY-MM-DD
+- Pour les factures, les catégories disponibles sont: modification, maintenance, hebergement, seo, autre
+- Les statuts de facture sont: en_attente, payee, annulee
+- Suggère d'ajouter des tags aux projets pour mieux les organiser
+- Tu peux rechercher des projets pour aider l'utilisateur à retrouver rapidement ses informations`;
 
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -474,7 +688,10 @@ INSTRUCTIONS :
         create_task: `Ajouter la tâche "${functionArgs.title}" au projet "${functionArgs.project_name}"`,
         update_prospect_status: `Changer le statut de "${functionArgs.prospect_name}" vers "${functionArgs.new_status}"`,
         update_project_status: `Changer le statut de "${functionArgs.project_name}" vers "${functionArgs.new_status}"`,
-        add_note_to_project: `Ajouter une note "${functionArgs.title}" au projet "${functionArgs.project_name}"`
+        add_note_to_project: `Ajouter une note au projet "${functionArgs.project_name}"`,
+        add_tag_to_project: `Ajouter le tag "${functionArgs.tag_name}" au projet "${functionArgs.project_name}"`,
+        create_invoice: `Créer une facture "${functionArgs.title}" de ${functionArgs.amount}€ pour "${functionArgs.project_name}"`,
+        search_projects: `Rechercher des projets avec "${functionArgs.query}"`
       };
 
       const description = actionDescriptions[functionName] || `Exécuter ${functionName}`;
@@ -560,11 +777,12 @@ router.get('/suggestions', async (req, res) => {
     }
 
     const questionsSuggerees = [
-      "Crée un projet pour un nouveau client",
-      "Ajoute un prospect",
+      "Crée un nouveau projet",
+      "Ajoute une facture à un projet",
       "Quelles sont mes prochaines deadlines ?",
-      "Résume mon activité",
-      "Change le statut d'un projet"
+      "Ajoute une tâche à un projet",
+      "Recherche un projet par client",
+      "Ajoute un tag à un projet"
     ];
 
     res.json({

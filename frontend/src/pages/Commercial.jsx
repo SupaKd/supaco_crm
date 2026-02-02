@@ -12,8 +12,6 @@ import {
   Phone,
   Mail,
   ExternalLink,
-  Trash2,
-  Edit2,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -129,22 +127,13 @@ const Commercial = () => {
     setShowModal(true);
   };
 
-  const handleEditProspect = (prospect) => {
+  const handleRowClick = (prospect, e) => {
+    // Ne pas ouvrir la modal si on clique sur un lien (email, phone, projet)
+    if (e.target.closest('a')) {
+      return;
+    }
     setEditingProspect(prospect);
     setShowModal(true);
-  };
-
-  const handleDeleteProspect = async (prospectId) => {
-    if (!confirm('Supprimer ce prospect ?')) return;
-
-    try {
-      await prospectsAPI.delete(prospectId);
-      toast.success('Prospect supprimé');
-      await fetchProspects();
-    } catch (error) {
-      console.error('Erreur suppression:', error);
-      toast.error('Erreur lors de la suppression');
-    }
   };
 
   const handleModalSave = async (data) => {
@@ -319,12 +308,15 @@ const Commercial = () => {
                     {sortField !== 'source' && <ArrowUpDown size={16} className="sort-icon-inactive" />}
                   </div>
                 </th>
-                <th className="actions-column">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredAndSortedProspects.map((prospect) => (
-                <tr key={prospect.id}>
+                <tr
+                  key={prospect.id}
+                  onClick={(e) => handleRowClick(prospect, e)}
+                  className="clickable-row"
+                >
                   <td className="prospect-name">
                     <div className="name-cell">
                       <User size={14} />
@@ -382,34 +374,25 @@ const Commercial = () => {
                     )}
                   </td>
                   <td>
-                    <span className="source-badge">
-                      {SOURCE_LABELS[prospect.source] || prospect.source}
-                    </span>
-                  </td>
-                  <td className="actions-cell">
-                    {prospect.project_id && (
-                      <button
-                        className="action-btn"
-                        onClick={() => navigate(`/projects/${prospect.project_id}`)}
-                        title="Voir le projet"
-                      >
-                        <ExternalLink size={16} />
-                      </button>
-                    )}
-                    <button
-                      className="action-btn"
-                      onClick={() => handleEditProspect(prospect)}
-                      title="Modifier"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      className="action-btn delete"
-                      onClick={() => handleDeleteProspect(prospect.id)}
-                      title="Supprimer"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="source-cell">
+                      <span className="source-badge">
+                        {SOURCE_LABELS[prospect.source] || prospect.source}
+                      </span>
+                      {prospect.project_id && (
+                        <a
+                          href={`/projects/${prospect.project_id}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            navigate(`/projects/${prospect.project_id}`);
+                          }}
+                          className="project-link"
+                          title="Voir le projet associé"
+                        >
+                          <ExternalLink size={14} />
+                          Projet
+                        </a>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

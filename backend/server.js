@@ -14,6 +14,8 @@ const attachmentRoutes = require('./routes/attachments');
 const prospectRoutes = require('./routes/prospects');
 const invoiceRoutes = require('./routes/invoices');
 const aiRoutes = require('./routes/ai');
+const timeTrackingRoutes = require('./routes/timeTracking');
+const searchRoutes = require('./routes/search');
 
 const app = express();
 
@@ -136,6 +138,8 @@ const routes = [
   { path: '/api/prospects', name: 'Prospects', router: prospectRoutes },
   { path: '/api/invoices', name: 'Factures', router: invoiceRoutes },
   { path: '/api/ai', name: 'IA', router: aiRoutes },
+  { path: '/api/time-tracking', name: 'Suivi du temps', router: timeTrackingRoutes },
+  { path: '/api/search', name: 'Recherche globale', router: searchRoutes },
 ];
 
 routes.forEach(({ path, name, router }) => {

@@ -1,24 +1,22 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { projectsAPI, tagsAPI } from '../services/api';
-import { useToast } from '../contexts/ToastContext';
 import Loader from '../components/Loader';
-import QuickViewModal from '../components/QuickViewModal';
-import { Plus, User, DollarSign, Calendar, Search, Tag, X, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Eye, Edit, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, User, DollarSign, Calendar, Search, Tag, X, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square, Trash2, Edit } from 'lucide-react';
 import './Projects.scss';
 
 const Projects = () => {
   const navigate = useNavigate();
-  const toast = useToast();
   const [projects, setProjects] = useState([]);
   const [allTags, setAllTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
-  const [editingCell, setEditingCell] = useState(null); // { projectId, field }
-  const [editValue, setEditValue] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [quickViewProject, setQuickViewProject] = useState(null);
+
+  // Sélection multiple
+  const [selectedProjects, setSelectedProjects] = useState([]);
+  const [bulkActionMode, setBulkActionMode] = useState(false);
 
   // Tri
   const [sortField, setSortField] = useState('created_at');
@@ -32,14 +30,6 @@ const Projects = () => {
     totalPages: 0
   });
 
-  useEffect(() => {
-    fetchTags();
-  }, []);
-
-  useEffect(() => {
-    fetchProjects();
-  }, [pagination.page, searchQuery, selectedTag]);
-
   const fetchTags = async () => {
     try {
       const response = await tagsAPI.getAll();
@@ -49,7 +39,7 @@ const Projects = () => {
     }
   };
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -57,7 +47,7 @@ const Projects = () => {
         limit: pagination.limit
       };
 
-      if (searchQuery) params.search = searchQuery;
+      if (debouncedSearchQuery) params.search = debouncedSearchQuery;
       if (selectedTag) params.tagId = selectedTag;
 
       const response = await projectsAPI.getAll(params);
@@ -72,7 +62,24 @@ const Projects = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, debouncedSearchQuery, selectedTag]);
+
+  useEffect(() => {
+    fetchTags();
+  }, []);
+
+  // Debounce pour la recherche
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
@@ -96,6 +103,82 @@ const Projects = () => {
     } else {
       setSortField(field);
       setSortDirection('asc');
+    }
+  };
+
+  // Gestion de la sélection multiple
+  const toggleProjectSelection = (projectId) => {
+    setSelectedProjects(prev => {
+      if (prev.includes(projectId)) {
+        return prev.filter(id => id !== projectId);
+      }
+      return [...prev, projectId];
+    });
+  };
+
+  const selectAllProjects = () => {
+    if (selectedProjects.length === projects.length) {
+      setSelectedProjects([]);
+    } else {
+      setSelectedProjects(projects.map(p => p.id));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedProjects([]);
+    setBulkActionMode(false);
+  };
+
+  // Actions groupées
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer ${selectedProjects.length} projet(s) ?`)) {
+      return;
+    }
+
+    try {
+      await Promise.all(selectedProjects.map(id => projectsAPI.delete(id)));
+      fetchProjects();
+      clearSelection();
+    } catch (error) {
+      console.error('Erreur suppression groupée:', error);
+      alert('Erreur lors de la suppression des projets');
+    }
+  };
+
+  const handleBulkStatusChange = async (newStatus) => {
+    try {
+      await Promise.all(
+        selectedProjects.map(id =>
+          projectsAPI.update(id, { status: newStatus })
+        )
+      );
+      fetchProjects();
+      clearSelection();
+    } catch (error) {
+      console.error('Erreur changement de statut groupé:', error);
+      alert('Erreur lors du changement de statut');
+    }
+  };
+
+  const handleBulkAddTag = async () => {
+    // Afficher les tags disponibles
+    const tagOptions = allTags.map(tag => `${tag.id}: ${tag.name}`).join('\n');
+    const tagId = prompt(`Sélectionnez un tag:\n\n${tagOptions}\n\nEntrez l'ID du tag:`);
+
+    if (!tagId || isNaN(tagId)) return;
+
+    try {
+      await Promise.all(
+        selectedProjects.map(projectId =>
+          tagsAPI.addToProject(projectId, parseInt(tagId))
+        )
+      );
+      fetchProjects();
+      clearSelection();
+      alert('Tags ajoutés avec succès!');
+    } catch (error) {
+      console.error('Erreur ajout de tag groupé:', error);
+      alert('Erreur lors de l\'ajout du tag');
     }
   };
 
@@ -123,72 +206,8 @@ const Projects = () => {
     return sorted;
   }, [projects, sortField, sortDirection]);
 
-  const handleStartEdit = (projectId, field, currentValue) => {
-    setEditingCell({ projectId, field });
-    setEditValue(currentValue || '');
-  };
-
-  const handleCancelEdit = () => {
-    setEditingCell(null);
-    setEditValue('');
-  };
-
-  const handleSaveEdit = async (project) => {
-    if (!editingCell) return;
-
-    try {
-      setSaving(true);
-
-      const updateData = {
-        name: project.name,
-        client_name: project.client_name,
-        status: project.status,
-        budget: project.budget,
-        deadline: project.deadline,
-        [editingCell.field]: editValue === '' ? null : editValue
-      };
-
-      // Conversion pour le budget
-      if (editingCell.field === 'budget') {
-        updateData.budget = editValue ? parseFloat(editValue) : null;
-      }
-
-      await projectsAPI.update(project.id, updateData);
-
-      // Mettre à jour localement
-      setProjects(prevProjects =>
-        prevProjects.map(p =>
-          p.id === project.id
-            ? { ...p, [editingCell.field]: editingCell.field === 'budget' && editValue ? parseFloat(editValue) : editValue }
-            : p
-        )
-      );
-
-      toast.success('Projet mis à jour');
-      setEditingCell(null);
-      setEditValue('');
-    } catch (error) {
-      console.error('Erreur mise à jour:', error);
-      toast.error('Erreur lors de la mise à jour');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const isEditing = (projectId, field) => {
-    return editingCell?.projectId === projectId && editingCell?.field === field;
-  };
-
-  const handleRowClick = (project, e) => {
-    // Ne pas ouvrir la modal si on clique sur une cellule éditable ou un bouton
-    if (
-      e.target.closest('.editable-cell') ||
-      e.target.closest('.action-btn') ||
-      e.target.closest('.inline-edit-table')
-    ) {
-      return;
-    }
-    setQuickViewProject(project);
+  const handleRowClick = (project) => {
+    navigate(`/projects/${project.id}`);
   };
 
   if (loading && pagination.page === 1) {
@@ -282,10 +301,138 @@ const Projects = () => {
         </div>
       ) : (
         <>
+          {/* Barre d'actions groupées */}
+          {selectedProjects.length > 0 && (
+            <div className="bulk-actions-bar" style={{ display: 'flex', background: '#0077b6', padding: '16px', marginBottom: '20px', borderRadius: '12px', color: 'white' }}>
+              <div className="bulk-actions-info">
+                <CheckSquare size={20} />
+                <span>{selectedProjects.length} projet(s) sélectionné(s)</span>
+              </div>
+              <div className="bulk-actions-buttons" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <select
+                  className="bulk-status-select"
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleBulkStatusChange(e.target.value);
+                      e.target.value = '';
+                    }
+                  }}
+                  defaultValue=""
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: '2px solid white',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="" disabled>Changer le statut</option>
+                  <option value="devis" style={{ color: '#111', background: '#fff' }}>Devis</option>
+                  <option value="en_cours" style={{ color: '#111', background: '#fff' }}>En cours</option>
+                  <option value="termine" style={{ color: '#111', background: '#fff' }}>Terminé</option>
+                  <option value="annule" style={{ color: '#111', background: '#fff' }}>Annulé</option>
+                </select>
+                <button
+                  className="bulk-action-btn tag"
+                  onClick={handleBulkAddTag}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: '2px solid white',
+                    background: 'transparent',
+                    color: 'white',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'white'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <Tag size={16} />
+                  Ajouter un tag
+                </button>
+                <button
+                  className="bulk-action-btn delete"
+                  onClick={handleBulkDelete}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: '2px solid white',
+                    background: 'transparent',
+                    color: 'white',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'white';
+                    e.currentTarget.style.color = '#ef4444';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'white';
+                  }}
+                >
+                  <Trash2 size={16} />
+                  Supprimer
+                </button>
+                <button
+                  className="bulk-action-btn cancel"
+                  onClick={clearSelection}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: '2px solid white',
+                    background: 'transparent',
+                    color: 'white',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'white';
+                    e.currentTarget.style.color = '#64748b';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'white';
+                  }}
+                >
+                  <X size={16} />
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="projects-table-wrapper">
             <table className="projects-table">
               <thead>
                 <tr>
+                  <th className="checkbox-column">
+                    <button
+                      className="checkbox-btn"
+                      onClick={selectAllProjects}
+                      aria-label="Tout sélectionner"
+                    >
+                      {selectedProjects.length === projects.length && projects.length > 0 ? (
+                        <CheckSquare size={18} />
+                      ) : (
+                        <Square size={18} />
+                      )}
+                    </button>
+                  </th>
                   <th onClick={() => handleSort('name')} className="sortable">
                     <div className="th-content">
                       Nom du projet
@@ -332,7 +479,6 @@ const Projects = () => {
                     </div>
                   </th>
                   <th>Tags</th>
-                  <th className="actions-column">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -340,206 +486,55 @@ const Projects = () => {
                   <tr
                     key={project.id}
                     onClick={(e) => handleRowClick(project, e)}
-                    className="clickable-row"
+                    className={`clickable-row ${selectedProjects.includes(project.id) ? 'selected' : ''}`}
                   >
-                    <td className="project-name editable-cell">
-                      {isEditing(project.id, 'name') ? (
-                        <div className="inline-edit-table">
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveEdit(project);
-                              if (e.key === 'Escape') handleCancelEdit();
-                            }}
-                            autoFocus
-                          />
-                          <div className="inline-actions">
-                            <button
-                              className="btn-save"
-                              onClick={() => handleSaveEdit(project)}
-                              disabled={saving}
-                            >
-                              <CheckCircle2 size={14} />
-                            </button>
-                            <button
-                              className="btn-cancel"
-                              onClick={handleCancelEdit}
-                            >
-                              <XCircle size={14} />
-                            </button>
-                          </div>
+                    <td className="checkbox-column" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="checkbox-btn"
+                        onClick={() => toggleProjectSelection(project.id)}
+                        aria-label="Sélectionner"
+                      >
+                        {selectedProjects.includes(project.id) ? (
+                          <CheckSquare size={18} />
+                        ) : (
+                          <Square size={18} />
+                        )}
+                      </button>
+                    </td>
+                    <td className="project-name">
+                      {project.name}
+                    </td>
+                    <td>
+                      <div className="client-cell">
+                        <User size={14} />
+                        {project.client_name}
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`badge badge-${project.status}`}>
+                        {project.status === 'devis' ? 'Devis' :
+                         project.status === 'en_cours' ? 'En cours' :
+                         project.status === 'termine' ? 'Terminé' : 'Annulé'}
+                      </span>
+                    </td>
+                    <td>
+                      {project.budget ? (
+                        <div className="budget-cell">
+                          <DollarSign size={14} />
+                          {project.budget}€
                         </div>
                       ) : (
-                        <div className="view-cell" onClick={() => handleStartEdit(project.id, 'name', project.name)}>
-                          {project.name}
-                          <Edit size={12} className="edit-icon" />
-                        </div>
+                        <span className="no-data">-</span>
                       )}
                     </td>
-                    <td className="editable-cell">
-                      {isEditing(project.id, 'client_name') ? (
-                        <div className="inline-edit-table">
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveEdit(project);
-                              if (e.key === 'Escape') handleCancelEdit();
-                            }}
-                            autoFocus
-                          />
-                          <div className="inline-actions">
-                            <button
-                              className="btn-save"
-                              onClick={() => handleSaveEdit(project)}
-                              disabled={saving}
-                            >
-                              <CheckCircle2 size={14} />
-                            </button>
-                            <button
-                              className="btn-cancel"
-                              onClick={handleCancelEdit}
-                            >
-                              <XCircle size={14} />
-                            </button>
-                          </div>
+                    <td>
+                      {project.deadline ? (
+                        <div className="date-cell">
+                          <Calendar size={14} />
+                          {new Date(project.deadline).toLocaleDateString('fr-FR')}
                         </div>
                       ) : (
-                        <div className="client-cell view-cell" onClick={() => handleStartEdit(project.id, 'client_name', project.client_name)}>
-                          <User size={14} />
-                          {project.client_name}
-                          <Edit size={12} className="edit-icon" />
-                        </div>
-                      )}
-                    </td>
-                    <td className="editable-cell">
-                      {isEditing(project.id, 'status') ? (
-                        <div className="inline-edit-table">
-                          <select
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            autoFocus
-                          >
-                            <option value="devis">Devis</option>
-                            <option value="en_cours">En cours</option>
-                            <option value="termine">Terminé</option>
-                            <option value="annule">Annulé</option>
-                          </select>
-                          <div className="inline-actions">
-                            <button
-                              className="btn-save"
-                              onClick={() => handleSaveEdit(project)}
-                              disabled={saving}
-                            >
-                              <CheckCircle2 size={14} />
-                            </button>
-                            <button
-                              className="btn-cancel"
-                              onClick={handleCancelEdit}
-                            >
-                              <XCircle size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="view-cell" onClick={() => handleStartEdit(project.id, 'status', project.status)}>
-                          <span className={`badge badge-${project.status}`}>
-                            {project.status === 'devis' ? 'Devis' :
-                             project.status === 'en_cours' ? 'En cours' :
-                             project.status === 'termine' ? 'Terminé' : 'Annulé'}
-                          </span>
-                          <Edit size={12} className="edit-icon" />
-                        </div>
-                      )}
-                    </td>
-                    <td className="editable-cell">
-                      {isEditing(project.id, 'budget') ? (
-                        <div className="inline-edit-table">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveEdit(project);
-                              if (e.key === 'Escape') handleCancelEdit();
-                            }}
-                            autoFocus
-                          />
-                          <div className="inline-actions">
-                            <button
-                              className="btn-save"
-                              onClick={() => handleSaveEdit(project)}
-                              disabled={saving}
-                            >
-                              <CheckCircle2 size={14} />
-                            </button>
-                            <button
-                              className="btn-cancel"
-                              onClick={handleCancelEdit}
-                            >
-                              <XCircle size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="view-cell" onClick={() => handleStartEdit(project.id, 'budget', project.budget)}>
-                          {project.budget ? (
-                            <div className="budget-cell">
-                              <DollarSign size={14} />
-                              {project.budget}€
-                            </div>
-                          ) : (
-                            <span className="no-data">-</span>
-                          )}
-                          <Edit size={12} className="edit-icon" />
-                        </div>
-                      )}
-                    </td>
-                    <td className="editable-cell">
-                      {isEditing(project.id, 'deadline') ? (
-                        <div className="inline-edit-table">
-                          <input
-                            type="date"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveEdit(project);
-                              if (e.key === 'Escape') handleCancelEdit();
-                            }}
-                            autoFocus
-                          />
-                          <div className="inline-actions">
-                            <button
-                              className="btn-save"
-                              onClick={() => handleSaveEdit(project)}
-                              disabled={saving}
-                            >
-                              <CheckCircle2 size={14} />
-                            </button>
-                            <button
-                              className="btn-cancel"
-                              onClick={handleCancelEdit}
-                            >
-                              <XCircle size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="view-cell" onClick={() => handleStartEdit(project.id, 'deadline', project.deadline ? project.deadline.split('T')[0] : '')}>
-                          {project.deadline ? (
-                            <div className="date-cell">
-                              <Calendar size={14} />
-                              {new Date(project.deadline).toLocaleDateString('fr-FR')}
-                            </div>
-                          ) : (
-                            <span className="no-data">-</span>
-                          )}
-                          <Edit size={12} className="edit-icon" />
-                        </div>
+                        <span className="no-data">-</span>
                       )}
                     </td>
                     <td>
@@ -558,15 +553,6 @@ const Projects = () => {
                       ) : (
                         <span className="no-data">-</span>
                       )}
-                    </td>
-                    <td className="actions-cell">
-                      <button
-                        className="action-btn"
-                        onClick={() => navigate(`/projects/${project.id}`)}
-                        title="Voir le projet"
-                      >
-                        <Eye size={16} />
-                      </button>
                     </td>
                   </tr>
                 ))}
@@ -623,13 +609,6 @@ const Projects = () => {
           )}
         </>
       )}
-
-      {/* Modal d'aperçu rapide */}
-      <QuickViewModal
-        isOpen={!!quickViewProject}
-        onClose={() => setQuickViewProject(null)}
-        project={quickViewProject}
-      />
     </div>
   );
 };

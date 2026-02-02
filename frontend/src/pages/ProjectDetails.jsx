@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { projectsAPI, tasksAPI, notesAPI, attachmentsAPI, invoicesAPI } from '../services/api';
+import { projectsAPI, tasksAPI, notesAPI, attachmentsAPI, invoicesAPI, timeTrackingAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import Modal from '../components/Modal';
 import Loader from '../components/Loader';
 import TagManager from '../components/TagManager';
+import TaskTimer from '../components/TaskTimer';
 import {
   ArrowLeft,
   Save,
@@ -14,15 +15,22 @@ import {
   Circle,
   Clock,
   Edit2,
-  X,
   AlertTriangle,
   ExternalLink,
   Upload,
   FileText,
   Download,
-  File,
   Receipt,
-  Euro
+  Euro,
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  Link as LinkIcon,
+  BarChart3,
+  CheckSquare,
+  Square,
+  X
 } from 'lucide-react';
 import './ProjectDetails.scss';
 
@@ -31,17 +39,22 @@ const ProjectDetails = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const [activeTab, setActiveTab] = useState('details');
+  const [activeSection, setActiveSection] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [notes, setNotes] = useState([]);
   const [attachments, setAttachments] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [invoicesTotal, setInvoicesTotal] = useState({ count: 0, total: 0, paid: 0, pending: 0 });
-  const [isEditing, setIsEditing] = useState(false);
+  const [timeStats, setTimeStats] = useState({ total_seconds: 0, total_hours: '0.00' });
+  const [detailedTimeStats, setDetailedTimeStats] = useState(null);
+
+  // Sélection multiple des tâches
+  const [selectedTasks, setSelectedTasks] = useState([]);
+
+  // Modals
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
@@ -93,7 +106,6 @@ const ProjectDetails = () => {
         notesAPI.getByProject(id)
       ]);
 
-      // Récupérer les pièces jointes séparément pour gérer le cas où la table n'existe pas
       try {
         const attachmentsRes = await attachmentsAPI.getByProject(id);
         setAttachments(attachmentsRes.data);
@@ -101,7 +113,6 @@ const ProjectDetails = () => {
         setAttachments([]);
       }
 
-      // Récupérer les factures annexes
       try {
         const [invoicesRes, invoicesTotalRes] = await Promise.all([
           invoicesAPI.getByProject(id),
@@ -112,6 +123,16 @@ const ProjectDetails = () => {
       } catch {
         setInvoices([]);
         setInvoicesTotal({ count: 0, total: 0, paid: 0, pending: 0 });
+      }
+
+      try {
+        const timeRes = await timeTrackingAPI.getByProject(id);
+        setTimeStats({
+          total_seconds: timeRes.data.total_seconds || 0,
+          total_hours: timeRes.data.total_hours || '0.00'
+        });
+      } catch {
+        setTimeStats({ total_seconds: 0, total_hours: '0.00' });
       }
 
       setProject(projectRes.data);
@@ -130,50 +151,37 @@ const ProjectDetails = () => {
       setNotes(notesRes.data);
     } catch (err) {
       console.error('Erreur chargement projet:', err);
-      setError('Impossible de charger le projet');
+      toast.error('Impossible de charger le projet');
+      navigate('/projects');
     } finally {
       setLoading(false);
     }
   };
+
+  const fetchDetailedTimeStats = async () => {
+    try {
+      const response = await timeTrackingAPI.getProjectStats(id);
+      setDetailedTimeStats(response.data);
+    } catch (error) {
+      console.error('Erreur chargement statistiques détaillées:', error);
+      setDetailedTimeStats(null);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSection === 'time' && !detailedTimeStats) {
+      fetchDetailedTimeStats();
+    }
+  }, [activeSection]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      setError('');
-
-      const projectData = {
-        ...formData,
-        budget: formData.budget ? parseFloat(formData.budget) : null,
-        deadline: formData.deadline || null,
-        client_email: formData.client_email || null,
-        client_phone: formData.client_phone || null,
-        website_url: formData.website_url || null,
-        description: formData.description || null
-      };
-
-      await projectsAPI.update(id, projectData);
-      setIsEditing(false);
-      await fetchProjectData();
-      toast.success('Projet mis à jour avec succès');
-    } catch (err) {
-      console.error('Erreur sauvegarde:', err);
-      const errorMsg = err.response?.data?.message || 'Erreur lors de la sauvegarde';
-      setError(errorMsg);
-      toast.error(errorMsg);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleSaveField = async (fieldName) => {
     try {
       setSaving(true);
-      setError('');
 
       const projectData = {
         ...formData,
@@ -191,12 +199,15 @@ const ProjectDetails = () => {
       toast.success('Mis à jour');
     } catch (err) {
       console.error('Erreur sauvegarde:', err);
-      const errorMsg = err.response?.data?.message || 'Erreur lors de la sauvegarde';
-      setError(errorMsg);
-      toast.error(errorMsg);
+      toast.error(err.response?.data?.message || 'Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCancelEdit = (fieldName) => {
+    setEditingField(null);
+    setFormData(prev => ({ ...prev, [fieldName]: project?.[fieldName] || '' }));
   };
 
   const handleDelete = async () => {
@@ -206,8 +217,7 @@ const ProjectDetails = () => {
       navigate('/projects');
     } catch (err) {
       console.error('Erreur suppression:', err);
-      const errorMsg = err.response?.data?.message || 'Erreur lors de la suppression';
-      toast.error(errorMsg);
+      toast.error(err.response?.data?.message || 'Erreur lors de la suppression');
       setShowDeleteModal(false);
     }
   };
@@ -247,6 +257,60 @@ const ProjectDetails = () => {
     } catch (err) {
       console.error('Erreur suppression tâche:', err);
       toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  // Sélection multiple des tâches
+  const toggleTaskSelection = (taskId) => {
+    setSelectedTasks(prev => {
+      if (prev.includes(taskId)) {
+        return prev.filter(id => id !== taskId);
+      }
+      return [...prev, taskId];
+    });
+  };
+
+  const selectAllTasks = () => {
+    if (selectedTasks.length === tasks.length) {
+      setSelectedTasks([]);
+    } else {
+      setSelectedTasks(tasks.map(t => t.id));
+    }
+  };
+
+  const clearTaskSelection = () => {
+    setSelectedTasks([]);
+  };
+
+  const handleBulkDeleteTasks = async () => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer ${selectedTasks.length} tâche(s) ?`)) {
+      return;
+    }
+
+    try {
+      await Promise.all(selectedTasks.map(id => tasksAPI.delete(id)));
+      await fetchProjectData();
+      clearTaskSelection();
+      toast.success(`${selectedTasks.length} tâche(s) supprimée(s)`);
+    } catch (err) {
+      console.error('Erreur suppression groupée:', err);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const handleBulkTaskStatusChange = async (newStatus) => {
+    try {
+      await Promise.all(
+        selectedTasks.map(taskId =>
+          tasksAPI.update(taskId, { status: newStatus })
+        )
+      );
+      await fetchProjectData();
+      clearTaskSelection();
+      toast.success(`Statut mis à jour pour ${selectedTasks.length} tâche(s)`);
+    } catch (err) {
+      console.error('Erreur changement de statut groupé:', err);
+      toast.error('Erreur lors du changement de statut');
     }
   };
 
@@ -314,6 +378,8 @@ const ProjectDetails = () => {
   };
 
   const handleDeleteAttachment = async (attachmentId) => {
+    if (!confirm('Supprimer ce fichier ?')) return;
+
     try {
       await attachmentsAPI.delete(attachmentId);
       await fetchProjectData();
@@ -322,32 +388,6 @@ const ProjectDetails = () => {
       console.error('Erreur suppression fichier:', err);
       toast.error('Erreur lors de la suppression');
     }
-  };
-
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'Ko', 'Mo', 'Go'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const getCategoryLabel = (category) => {
-    const labels = {
-      'devis': 'Devis',
-      'facture': 'Facture',
-      'contrat': 'Contrat',
-      'autre': 'Autre'
-    };
-    return labels[category] || category;
-  };
-
-  const getFileIcon = (mimeType) => {
-    if (mimeType.startsWith('image/')) return '🖼️';
-    if (mimeType === 'application/pdf') return '📄';
-    if (mimeType.includes('word')) return '📝';
-    if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📊';
-    return '📎';
   };
 
   // Factures annexes
@@ -416,11 +456,49 @@ const ProjectDetails = () => {
     }
   };
 
+  // Utilitaires
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'Ko', 'Mo', 'Go'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getCategoryLabel = (category) => {
+    const labels = {
+      'devis': 'Devis',
+      'facture': 'Facture',
+      'contrat': 'Contrat',
+      'autre': 'Autre'
+    };
+    return labels[category] || category;
+  };
+
+  const getFileIcon = (mimeType) => {
+    if (mimeType.startsWith('image/')) return '🖼️';
+    if (mimeType === 'application/pdf') return '📄';
+    if (mimeType.includes('word')) return '📝';
+    if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📊';
+    return '📎';
+  };
+
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      'devis': { label: 'Devis', class: 'devis' },
+      'en_cours': { label: 'En cours', class: 'en_cours' },
+      'termine': { label: 'Terminé', class: 'termine' },
+      'annule': { label: 'Annulé', class: 'annule' }
+    };
+    const s = statusMap[status] || { label: status, class: 'default' };
+    return <span className={`badge badge-${s.class}`}>{s.label}</span>;
+  };
+
   const getInvoiceStatusBadge = (status) => {
     const statusMap = {
-      'en_attente': { label: 'En attente', class: 'warning' },
-      'payee': { label: 'Payée', class: 'success' },
-      'annulee': { label: 'Annulée', class: 'danger' }
+      'en_attente': { label: 'En attente', class: 'a_faire' },
+      'payee': { label: 'Payée', class: 'termine' },
+      'annulee': { label: 'Annulée', class: 'annule' }
     };
     const s = statusMap[status] || { label: status, class: 'default' };
     return <span className={`badge badge-${s.class}`}>{s.label}</span>;
@@ -441,495 +519,423 @@ const ProjectDetails = () => {
     return <Loader fullScreen />;
   }
 
-  if (error && !project) {
-    return <div className="error">{error}</div>;
+  if (!project) {
+    return null;
   }
 
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      'devis': { label: 'Devis', class: 'warning' },
-      'en_cours': { label: 'En cours', class: 'info' },
-      'termine': { label: 'Terminé', class: 'success' },
-      'annule': { label: 'Annulé', class: 'danger' }
-    };
-    const s = statusMap[status] || { label: status, class: 'default' };
-    return <span className={`badge badge-${s.class}`}>{s.label}</span>;
+  const taskStats = {
+    total: tasks.length,
+    completed: tasks.filter(t => t.status === 'termine').length,
+    pending: tasks.filter(t => t.status !== 'termine').length
   };
 
   return (
     <div className="project-details-page">
-      <div className="page-header">
-        <button onClick={() => navigate('/projects')} className="back-btn">
+      {/* Header with breadcrumb */}
+      <div className="page-header-wrapper">
+        <button
+          onClick={() => navigate('/projects')}
+          className="back-button"
+          aria-label="Retour aux projets"
+        >
           <ArrowLeft size={20} />
-          Retour
+          <span>Projets</span>
         </button>
-        <div className="header-content">
-          <div className="header-info">
-            <h1>{project?.name}</h1>
-            {!isEditing && getStatusBadge(project?.status)}
-          </div>
-          <div className="header-actions">
-            {isEditing ? (
-              <>
-                <button onClick={() => setIsEditing(false)} className="btn btn-secondary">
-                  <X size={18} />
-                  Annuler
-                </button>
-                <button onClick={handleSave} className="btn btn-primary" disabled={saving}>
-                  <Save size={18} />
-                  {saving ? 'Sauvegarde...' : 'Sauvegarder'}
-                </button>
-              </>
-            ) : (
-              <>
-                <button onClick={() => setIsEditing(true)} className="btn btn-secondary">
-                  <Edit2 size={18} />
-                  Modifier
-                </button>
-                <button onClick={() => setShowDeleteModal(true)} className="btn btn-danger">
-                  <Trash2 size={18} />
-                  Supprimer
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
 
-      <Modal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        title="Supprimer le projet"
-        footer={
-          <>
-            <button onClick={() => setShowDeleteModal(false)} className="btn btn-secondary">
-              Annuler
-            </button>
-            <button onClick={handleDelete} className="btn btn-danger">
+        <div className="project-header">
+          <div className="project-title-section">
+            <h1 className="project-title">{project.name}</h1>
+            {getStatusBadge(project.status)}
+          </div>
+          <div className="project-actions">
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="btn btn-outline-danger"
+              aria-label="Supprimer le projet"
+            >
               <Trash2 size={18} />
               Supprimer
             </button>
-          </>
-        }
-      >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-          <AlertTriangle size={24} color="#ef4444" />
-          <div>
-            <p style={{ margin: '0 0 0.5rem 0', fontWeight: '500' }}>
-              Êtes-vous sûr de vouloir supprimer ce projet ?
-            </p>
-            <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>
-              Cette action est irréversible. Toutes les tâches et notes associées seront également supprimées.
-            </p>
           </div>
         </div>
-      </Modal>
-
-      {error && (
-        <div className="error-message">{error}</div>
-      )}
-
-      <div className="tabs">
-        <button
-          className={activeTab === 'details' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('details')}
-        >
-          Détails
-        </button>
-        <button
-          className={activeTab === 'tasks' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('tasks')}
-        >
-          Tâches ({tasks.length})
-        </button>
-        <button
-          className={activeTab === 'notes' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('notes')}
-        >
-          Notes ({notes.length})
-        </button>
-        <button
-          className={activeTab === 'documents' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('documents')}
-        >
-          Documents ({attachments.length})
-        </button>
-        <button
-          className={activeTab === 'invoices' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('invoices')}
-        >
-          Factures ({invoices.length})
-        </button>
-        <button
-          className={activeTab === 'tags' ? 'tab active' : 'tab'}
-          onClick={() => setActiveTab('tags')}
-        >
-          Tags
-        </button>
       </div>
 
-      <div className="tab-content">
-        {activeTab === 'details' && (
-          <div className="details-tab">
-            {/* Cards récapitulatives */}
-            <div className="details-cards">
-              <div className="detail-card">
-                <div className="card-icon status">
-                  {project?.status === 'devis' && <FileText size={20} />}
-                  {project?.status === 'en_cours' && <Clock size={20} />}
-                  {project?.status === 'termine' && <CheckCircle2 size={20} />}
-                  {project?.status === 'annule' && <X size={20} />}
-                </div>
-                <div className="card-content">
-                  <span className="card-label">Statut</span>
-                  {isEditing ? (
-                    <select name="status" value={formData.status} onChange={handleChange} className="card-select">
-                      <option value="devis">Devis</option>
-                      <option value="en_cours">En cours</option>
-                      <option value="termine">Terminé</option>
-                      <option value="annule">Annulé</option>
-                    </select>
-                  ) : (
-                    <span className="card-value">{getStatusBadge(project?.status)}</span>
-                  )}
+      {/* Stats Cards */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon budget">
+            <Euro size={24} />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Budget</span>
+            <span className="stat-value">{project.budget ? `${project.budget}€` : '-'}</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon deadline">
+            <Calendar size={24} />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Date limite</span>
+            <span className="stat-value">
+              {project.deadline ? new Date(project.deadline).toLocaleDateString('fr-FR') : '-'}
+            </span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon tasks">
+            <BarChart3 size={24} />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Tâches</span>
+            <span className="stat-value">{taskStats.completed} / {taskStats.total}</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon time">
+            <Clock size={24} />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Temps total</span>
+            <span className="stat-value">{timeStats.total_hours}h</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon invoices">
+            <Receipt size={24} />
+          </div>
+          <div className="stat-content">
+            <span className="stat-label">Factures</span>
+            <span className="stat-value">
+              {invoicesTotal.paid ? `${parseFloat(invoicesTotal.paid).toFixed(0)}€` : '0€'} / {invoicesTotal.total ? `${parseFloat(invoicesTotal.total).toFixed(0)}€` : '0€'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="section-nav" role="navigation" aria-label="Navigation du projet">
+        <button
+          className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`}
+          onClick={() => setActiveSection('overview')}
+        >
+          <FileText size={18} />
+          <span>Vue d'ensemble</span>
+        </button>
+        <button
+          className={`nav-item ${activeSection === 'tasks' ? 'active' : ''}`}
+          onClick={() => setActiveSection('tasks')}
+        >
+          <CheckCircle2 size={18} />
+          <span>Tâches</span>
+          <span className="nav-badge">{tasks.length}</span>
+        </button>
+        <button
+          className={`nav-item ${activeSection === 'notes' ? 'active' : ''}`}
+          onClick={() => setActiveSection('notes')}
+        >
+          <FileText size={18} />
+          <span>Notes</span>
+          <span className="nav-badge">{notes.length}</span>
+        </button>
+        <button
+          className={`nav-item ${activeSection === 'documents' ? 'active' : ''}`}
+          onClick={() => setActiveSection('documents')}
+        >
+          <Upload size={18} />
+          <span>Documents</span>
+          <span className="nav-badge">{attachments.length}</span>
+        </button>
+        <button
+          className={`nav-item ${activeSection === 'invoices' ? 'active' : ''}`}
+          onClick={() => setActiveSection('invoices')}
+        >
+          <Receipt size={18} />
+          <span>Factures</span>
+          <span className="nav-badge">{invoices.length}</span>
+        </button>
+        <button
+          className={`nav-item ${activeSection === 'time' ? 'active' : ''}`}
+          onClick={() => setActiveSection('time')}
+        >
+          <Clock size={18} />
+          <span>Temps</span>
+        </button>
+        <button
+          className={`nav-item ${activeSection === 'tags' ? 'active' : ''}`}
+          onClick={() => setActiveSection('tags')}
+        >
+          <LinkIcon size={18} />
+          <span>Tags</span>
+        </button>
+      </nav>
+
+      {/* Content Sections */}
+      <div className="section-content">
+        {activeSection === 'overview' && (
+          <div className="overview-section">
+            <div className="section-grid">
+              {/* Informations du projet */}
+              <div className="info-card">
+                <h2 className="card-title">Informations du projet</h2>
+                <div className="info-list">
+                  <EditableField
+                    label="Nom du projet"
+                    name="name"
+                    value={formData.name}
+                    originalValue={project.name}
+                    icon={<FileText size={18} />}
+                    editing={editingField === 'name'}
+                    onEdit={() => setEditingField('name')}
+                    onChange={handleChange}
+                    onSave={() => handleSaveField('name')}
+                    onCancel={() => handleCancelEdit('name')}
+                    required
+                  />
+
+                  <EditableField
+                    label="Description"
+                    name="description"
+                    value={formData.description}
+                    originalValue={project.description}
+                    icon={<FileText size={18} />}
+                    editing={editingField === 'description'}
+                    onEdit={() => setEditingField('description')}
+                    onChange={handleChange}
+                    onSave={() => handleSaveField('description')}
+                    onCancel={() => handleCancelEdit('description')}
+                    type="textarea"
+                  />
+
+                  <EditableField
+                    label="Statut"
+                    name="status"
+                    value={formData.status}
+                    originalValue={project.status}
+                    icon={<BarChart3 size={18} />}
+                    editing={editingField === 'status'}
+                    onEdit={() => setEditingField('status')}
+                    onChange={handleChange}
+                    onSave={() => handleSaveField('status')}
+                    onCancel={() => handleCancelEdit('status')}
+                    type="select"
+                    options={[
+                      { value: 'devis', label: 'Devis' },
+                      { value: 'en_cours', label: 'En cours' },
+                      { value: 'termine', label: 'Terminé' },
+                      { value: 'annule', label: 'Annulé' }
+                    ]}
+                    renderDisplay={() => getStatusBadge(project.status)}
+                  />
+
+                  <EditableField
+                    label="Budget"
+                    name="budget"
+                    value={formData.budget}
+                    originalValue={project.budget}
+                    icon={<Euro size={18} />}
+                    editing={editingField === 'budget'}
+                    onEdit={() => setEditingField('budget')}
+                    onChange={handleChange}
+                    onSave={() => handleSaveField('budget')}
+                    onCancel={() => handleCancelEdit('budget')}
+                    type="number"
+                    renderDisplay={() => project.budget ? `${project.budget}€` : '-'}
+                  />
+
+                  <EditableField
+                    label="Date limite"
+                    name="deadline"
+                    value={formData.deadline}
+                    originalValue={project.deadline ? project.deadline.split('T')[0] : ''}
+                    icon={<Calendar size={18} />}
+                    editing={editingField === 'deadline'}
+                    onEdit={() => setEditingField('deadline')}
+                    onChange={handleChange}
+                    onSave={() => handleSaveField('deadline')}
+                    onCancel={() => handleCancelEdit('deadline')}
+                    type="date"
+                    renderDisplay={() => project.deadline ? new Date(project.deadline).toLocaleDateString('fr-FR') : '-'}
+                  />
                 </div>
               </div>
 
-              <div className="detail-card">
-                <div className="card-icon budget">
-                  <Euro size={20} />
-                </div>
-                <div className="card-content">
-                  <span className="card-label">Budget</span>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      name="budget"
-                      value={formData.budget}
-                      onChange={handleChange}
-                      step="0.01"
-                      className="card-input"
-                      placeholder="0.00"
-                    />
-                  ) : (
-                    <span className="card-value">{project?.budget ? `${project.budget}€` : '-'}</span>
-                  )}
+              {/* Informations du client */}
+              <div className="info-card">
+                <h2 className="card-title">Informations du client</h2>
+                <div className="info-list">
+                  <EditableField
+                    label="Nom du client"
+                    name="client_name"
+                    value={formData.client_name}
+                    originalValue={project.client_name}
+                    icon={<User size={18} />}
+                    editing={editingField === 'client_name'}
+                    onEdit={() => setEditingField('client_name')}
+                    onChange={handleChange}
+                    onSave={() => handleSaveField('client_name')}
+                    onCancel={() => handleCancelEdit('client_name')}
+                    required
+                  />
+
+                  <EditableField
+                    label="Email"
+                    name="client_email"
+                    value={formData.client_email}
+                    originalValue={project.client_email}
+                    icon={<Mail size={18} />}
+                    editing={editingField === 'client_email'}
+                    onEdit={() => setEditingField('client_email')}
+                    onChange={handleChange}
+                    onSave={() => handleSaveField('client_email')}
+                    onCancel={() => handleCancelEdit('client_email')}
+                    type="email"
+                    renderDisplay={() => project.client_email ? (
+                      <a href={`mailto:${project.client_email}`} className="link-value">
+                        {project.client_email}
+                      </a>
+                    ) : '-'}
+                  />
+
+                  <EditableField
+                    label="Téléphone"
+                    name="client_phone"
+                    value={formData.client_phone}
+                    originalValue={project.client_phone}
+                    icon={<Phone size={18} />}
+                    editing={editingField === 'client_phone'}
+                    onEdit={() => setEditingField('client_phone')}
+                    onChange={handleChange}
+                    onSave={() => handleSaveField('client_phone')}
+                    onCancel={() => handleCancelEdit('client_phone')}
+                    type="tel"
+                    renderDisplay={() => project.client_phone ? (
+                      <a href={`tel:${project.client_phone}`} className="link-value">
+                        {project.client_phone}
+                      </a>
+                    ) : '-'}
+                  />
+
+                  <EditableField
+                    label="Site web"
+                    name="website_url"
+                    value={formData.website_url}
+                    originalValue={project.website_url}
+                    icon={<ExternalLink size={18} />}
+                    editing={editingField === 'website_url'}
+                    onEdit={() => setEditingField('website_url')}
+                    onChange={handleChange}
+                    onSave={() => handleSaveField('website_url')}
+                    onCancel={() => handleCancelEdit('website_url')}
+                    type="url"
+                    renderDisplay={() => project.website_url ? (
+                      <a
+                        href={project.website_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="link-value"
+                      >
+                        Visiter <ExternalLink size={14} />
+                      </a>
+                    ) : '-'}
+                  />
                 </div>
               </div>
-
-              <div className="detail-card">
-                <div className="card-icon deadline">
-                  <Clock size={20} />
-                </div>
-                <div className="card-content">
-                  <span className="card-label">Date limite</span>
-                  {isEditing ? (
-                    <input
-                      type="date"
-                      name="deadline"
-                      value={formData.deadline}
-                      onChange={handleChange}
-                      className="card-input"
-                    />
-                  ) : (
-                    <span className="card-value">
-                      {project?.deadline ? new Date(project.deadline).toLocaleDateString('fr-FR') : '-'}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="detail-card">
-                <div className="card-icon website">
-                  <ExternalLink size={20} />
-                </div>
-                <div className="card-content">
-                  <span className="card-label">Site web</span>
-                  {isEditing ? (
-                    <input
-                      type="url"
-                      name="website_url"
-                      value={formData.website_url}
-                      onChange={handleChange}
-                      className="card-input"
-                      placeholder="https://..."
-                    />
-                  ) : (
-                    <span className="card-value">
-                      {project?.website_url ? (
-                        <a
-                          href={project.website_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="website-link"
-                        >
-                          Visiter
-                        </a>
-                      ) : '-'}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Tableau d'informations */}
-            <div className="details-table-section">
-              <h2>Informations détaillées</h2>
-              <table className="details-table">
-                <tbody>
-                  <tr>
-                    <th>Nom du projet</th>
-                    <td>
-                      {editingField === 'name' ? (
-                        <div className="inline-edit">
-                          <input
-                            type="text"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleChange}
-                            required
-                            autoFocus
-                          />
-                          <div className="inline-edit-actions">
-                            <button
-                              className="btn-inline-save"
-                              onClick={() => handleSaveField('name')}
-                              disabled={saving}
-                            >
-                              <CheckCircle2 size={16} />
-                            </button>
-                            <button
-                              className="btn-inline-cancel"
-                              onClick={() => {
-                                setEditingField(null);
-                                setFormData(prev => ({ ...prev, name: project?.name }));
-                              }}
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="view-field">
-                          <span>{project?.name}</span>
-                          <button
-                            className="btn-edit-field"
-                            onClick={() => setEditingField('name')}
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Description</th>
-                    <td>
-                      {editingField === 'description' ? (
-                        <div className="inline-edit">
-                          <textarea
-                            name="description"
-                            value={formData.description}
-                            onChange={handleChange}
-                            rows="3"
-                            autoFocus
-                          />
-                          <div className="inline-edit-actions">
-                            <button
-                              className="btn-inline-save"
-                              onClick={() => handleSaveField('description')}
-                              disabled={saving}
-                            >
-                              <CheckCircle2 size={16} />
-                            </button>
-                            <button
-                              className="btn-inline-cancel"
-                              onClick={() => {
-                                setEditingField(null);
-                                setFormData(prev => ({ ...prev, description: project?.description }));
-                              }}
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="view-field">
-                          <span>{project?.description || '-'}</span>
-                          <button
-                            className="btn-edit-field"
-                            onClick={() => setEditingField('description')}
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Client</th>
-                    <td>
-                      {editingField === 'client_name' ? (
-                        <div className="inline-edit">
-                          <input
-                            type="text"
-                            name="client_name"
-                            value={formData.client_name}
-                            onChange={handleChange}
-                            required
-                            autoFocus
-                          />
-                          <div className="inline-edit-actions">
-                            <button
-                              className="btn-inline-save"
-                              onClick={() => handleSaveField('client_name')}
-                              disabled={saving}
-                            >
-                              <CheckCircle2 size={16} />
-                            </button>
-                            <button
-                              className="btn-inline-cancel"
-                              onClick={() => {
-                                setEditingField(null);
-                                setFormData(prev => ({ ...prev, client_name: project?.client_name }));
-                              }}
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="view-field">
-                          <span>{project?.client_name}</span>
-                          <button
-                            className="btn-edit-field"
-                            onClick={() => setEditingField('client_name')}
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Email du client</th>
-                    <td>
-                      {editingField === 'client_email' ? (
-                        <div className="inline-edit">
-                          <input
-                            type="email"
-                            name="client_email"
-                            value={formData.client_email}
-                            onChange={handleChange}
-                            autoFocus
-                          />
-                          <div className="inline-edit-actions">
-                            <button
-                              className="btn-inline-save"
-                              onClick={() => handleSaveField('client_email')}
-                              disabled={saving}
-                            >
-                              <CheckCircle2 size={16} />
-                            </button>
-                            <button
-                              className="btn-inline-cancel"
-                              onClick={() => {
-                                setEditingField(null);
-                                setFormData(prev => ({ ...prev, client_email: project?.client_email }));
-                              }}
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="view-field">
-                          <span>{project?.client_email || '-'}</span>
-                          <button
-                            className="btn-edit-field"
-                            onClick={() => setEditingField('client_email')}
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                  <tr>
-                    <th>Téléphone du client</th>
-                    <td>
-                      {editingField === 'client_phone' ? (
-                        <div className="inline-edit">
-                          <input
-                            type="tel"
-                            name="client_phone"
-                            value={formData.client_phone}
-                            onChange={handleChange}
-                            autoFocus
-                          />
-                          <div className="inline-edit-actions">
-                            <button
-                              className="btn-inline-save"
-                              onClick={() => handleSaveField('client_phone')}
-                              disabled={saving}
-                            >
-                              <CheckCircle2 size={16} />
-                            </button>
-                            <button
-                              className="btn-inline-cancel"
-                              onClick={() => {
-                                setEditingField(null);
-                                setFormData(prev => ({ ...prev, client_phone: project?.client_phone }));
-                              }}
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="view-field">
-                          <span>{project?.client_phone || '-'}</span>
-                          <button
-                            className="btn-edit-field"
-                            onClick={() => setEditingField('client_phone')}
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
             </div>
           </div>
         )}
 
-        {activeTab === 'tasks' && (
-          <div className="tasks-tab">
-            <div className="add-task">
+        {activeSection === 'tasks' && (
+          <div className="tasks-section">
+            <div className="section-header">
+              <h2>Tâches du projet</h2>
+              <span className="section-count">{taskStats.completed} / {taskStats.total} complétées</span>
+            </div>
+
+            {/* Barre d'actions groupées pour les tâches */}
+            {selectedTasks.length > 0 && (
+              <div className="bulk-actions-bar">
+                <div className="bulk-actions-info">
+                  <CheckSquare size={20} />
+                  <span>{selectedTasks.length} tâche(s) sélectionnée(s)</span>
+                </div>
+                <div className="bulk-actions-buttons">
+                  <select
+                    className="bulk-status-select"
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleBulkTaskStatusChange(e.target.value);
+                        e.target.value = '';
+                      }
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Changer le statut</option>
+                    <option value="a_faire">À faire</option>
+                    <option value="en_cours">En cours</option>
+                    <option value="termine">Terminé</option>
+                  </select>
+                  <button className="bulk-action-btn delete" onClick={handleBulkDeleteTasks}>
+                    <Trash2 size={16} />
+                    Supprimer
+                  </button>
+                  <button className="bulk-action-btn cancel" onClick={clearTaskSelection}>
+                    <X size={16} />
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="add-item-form">
               <input
                 type="text"
-                placeholder="Nouvelle tâche..."
+                placeholder="Ajouter une nouvelle tâche..."
                 value={newTask.title}
                 onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
                 onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
+                className="add-input"
               />
-              <button onClick={handleAddTask} className="btn btn-primary">
+              <button onClick={handleAddTask} className="btn btn-primary" disabled={!newTask.title.trim()}>
                 <Plus size={18} />
                 Ajouter
               </button>
+              {tasks.length > 0 && (
+                <button
+                  onClick={selectAllTasks}
+                  className="btn btn-outline-secondary"
+                  title="Tout sélectionner"
+                >
+                  {selectedTasks.length === tasks.length ? <CheckSquare size={18} /> : <Square size={18} />}
+                </button>
+              )}
             </div>
 
-            <div className="tasks-list">
+            <div className="items-list">
               {tasks.length === 0 ? (
-                <p className="empty-state">Aucune tâche pour ce projet</p>
+                <div className="empty-state">
+                  <CheckCircle2 size={48} />
+                  <p>Aucune tâche pour ce projet</p>
+                  <span>Commencez par ajouter votre première tâche</span>
+                </div>
               ) : (
                 tasks.map((task) => (
-                  <div key={task.id} className={`task-item ${task.status === 'termine' ? 'completed' : ''}`}>
+                  <div key={task.id} className={`task-item ${task.status === 'termine' ? 'completed' : ''} ${selectedTasks.includes(task.id) ? 'selected' : ''}`}>
+                    <button
+                      className="task-selection-checkbox"
+                      onClick={() => toggleTaskSelection(task.id)}
+                      aria-label="Sélectionner la tâche"
+                    >
+                      {selectedTasks.includes(task.id) ? <CheckSquare size={18} /> : <Square size={18} />}
+                    </button>
                     <button
                       className="task-checkbox"
                       onClick={() => handleToggleTask(task)}
+                      aria-label={task.status === 'termine' ? 'Marquer comme non terminée' : 'Marquer comme terminée'}
                     >
                       {task.status === 'termine' ? <CheckCircle2 size={20} /> : <Circle size={20} />}
                     </button>
@@ -937,12 +943,16 @@ const ProjectDetails = () => {
                       <h4>{task.title}</h4>
                       {task.description && <p>{task.description}</p>}
                     </div>
-                    <button
-                      className="task-delete"
-                      onClick={() => handleDeleteTask(task.id)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="task-actions">
+                      <TaskTimer taskId={task.id} onTimeUpdate={fetchProjectData} />
+                      <button
+                        className="item-delete-btn"
+                        onClick={() => handleDeleteTask(task.id)}
+                        aria-label="Supprimer la tâche"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -950,24 +960,34 @@ const ProjectDetails = () => {
           </div>
         )}
 
-        {activeTab === 'notes' && (
-          <div className="notes-tab">
-            <div className="add-note">
+        {activeSection === 'notes' && (
+          <div className="notes-section">
+            <div className="section-header">
+              <h2>Notes du projet</h2>
+              <span className="section-count">{notes.length} note{notes.length > 1 ? 's' : ''}</span>
+            </div>
+
+            <div className="add-item-form">
               <textarea
-                placeholder="Ajouter une note..."
+                placeholder="Ajouter une nouvelle note..."
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
                 rows="3"
+                className="add-textarea"
               />
-              <button onClick={handleAddNote} className="btn btn-primary">
+              <button onClick={handleAddNote} className="btn btn-primary" disabled={!newNote.trim()}>
                 <Plus size={18} />
                 Ajouter une note
               </button>
             </div>
 
-            <div className="notes-list">
+            <div className="items-list">
               {notes.length === 0 ? (
-                <p className="empty-state">Aucune note pour ce projet</p>
+                <div className="empty-state">
+                  <FileText size={48} />
+                  <p>Aucune note pour ce projet</p>
+                  <span>Ajoutez des notes pour garder trace des informations importantes</span>
+                </div>
               ) : (
                 notes.map((note) => (
                   <div key={note.id} className="note-item">
@@ -977,8 +997,9 @@ const ProjectDetails = () => {
                         {new Date(note.created_at).toLocaleDateString('fr-FR')} à {new Date(note.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                       <button
-                        className="note-delete"
+                        className="item-delete-btn"
                         onClick={() => handleDeleteNote(note.id)}
+                        aria-label="Supprimer la note"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -991,8 +1012,13 @@ const ProjectDetails = () => {
           </div>
         )}
 
-        {activeTab === 'documents' && (
-          <div className="documents-tab">
+        {activeSection === 'documents' && (
+          <div className="documents-section">
+            <div className="section-header">
+              <h2>Documents du projet</h2>
+              <span className="section-count">{attachments.length} document{attachments.length > 1 ? 's' : ''}</span>
+            </div>
+
             <div className="upload-section">
               <div className="upload-form">
                 <select
@@ -1007,7 +1033,7 @@ const ProjectDetails = () => {
                 </select>
                 <label className="upload-btn btn btn-primary">
                   <Upload size={18} />
-                  {uploading ? 'Upload...' : 'Ajouter un fichier'}
+                  {uploading ? 'Upload en cours...' : 'Ajouter un fichier'}
                   <input
                     type="file"
                     onChange={handleFileUpload}
@@ -1022,18 +1048,22 @@ const ProjectDetails = () => {
               </p>
             </div>
 
-            <div className="attachments-list">
+            <div className="items-list">
               {attachments.length === 0 ? (
-                <p className="empty-state">Aucun document pour ce projet</p>
+                <div className="empty-state">
+                  <Upload size={48} />
+                  <p>Aucun document pour ce projet</p>
+                  <span>Téléchargez des fichiers pour les associer à ce projet</span>
+                </div>
               ) : (
                 attachments.map((attachment) => (
-                  <div key={attachment.id} className="attachment-item">
-                    <div className="attachment-icon">
+                  <div key={attachment.id} className="document-item">
+                    <div className="document-icon">
                       {getFileIcon(attachment.mime_type)}
                     </div>
-                    <div className="attachment-info">
+                    <div className="document-info">
                       <h4>{attachment.original_name}</h4>
-                      <div className="attachment-meta">
+                      <div className="document-meta">
                         <span className={`category-badge category-${attachment.category}`}>
                           {getCategoryLabel(attachment.category)}
                         </span>
@@ -1043,18 +1073,18 @@ const ProjectDetails = () => {
                         </span>
                       </div>
                     </div>
-                    <div className="attachment-actions">
+                    <div className="document-actions">
                       <button
                         className="action-btn download"
                         onClick={() => handleDownloadAttachment(attachment)}
-                        title="Télécharger"
+                        aria-label="Télécharger"
                       >
                         <Download size={18} />
                       </button>
                       <button
                         className="action-btn delete"
                         onClick={() => handleDeleteAttachment(attachment.id)}
-                        title="Supprimer"
+                        aria-label="Supprimer"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -1066,15 +1096,23 @@ const ProjectDetails = () => {
           </div>
         )}
 
-        {activeTab === 'invoices' && (
-          <div className="invoices-tab">
+        {activeSection === 'invoices' && (
+          <div className="invoices-section">
+            <div className="section-header">
+              <h2>Factures annexes</h2>
+              <button onClick={() => handleOpenInvoiceModal()} className="btn btn-primary">
+                <Plus size={18} />
+                Nouvelle facture
+              </button>
+            </div>
+
             <div className="invoices-summary">
-              <div className="summary-card">
-                <span className="summary-label">Total factures</span>
+              <div className="summary-card total">
+                <span className="summary-label">Total</span>
                 <span className="summary-value">{invoicesTotal.total ? `${parseFloat(invoicesTotal.total).toFixed(2)}€` : '0€'}</span>
               </div>
               <div className="summary-card success">
-                <span className="summary-label">Payées</span>
+                <span className="summary-label">Payé</span>
                 <span className="summary-value">{invoicesTotal.paid ? `${parseFloat(invoicesTotal.paid).toFixed(2)}€` : '0€'}</span>
               </div>
               <div className="summary-card warning">
@@ -1083,17 +1121,13 @@ const ProjectDetails = () => {
               </div>
             </div>
 
-            <div className="invoices-header">
-              <h3>Factures annexes</h3>
-              <button onClick={() => handleOpenInvoiceModal()} className="btn btn-primary">
-                <Plus size={18} />
-                Ajouter une facture
-              </button>
-            </div>
-
-            <div className="invoices-list">
+            <div className="items-list">
               {invoices.length === 0 ? (
-                <p className="empty-state">Aucune facture annexe pour ce projet</p>
+                <div className="empty-state">
+                  <Receipt size={48} />
+                  <p>Aucune facture annexe</p>
+                  <span>Ajoutez des factures pour les modifications, maintenances, etc.</span>
+                </div>
               ) : (
                 invoices.map((invoice) => (
                   <div key={invoice.id} className="invoice-item">
@@ -1101,7 +1135,7 @@ const ProjectDetails = () => {
                       <Receipt size={24} />
                     </div>
                     <div className="invoice-info">
-                      <div className="invoice-header">
+                      <div className="invoice-header-info">
                         <h4>{invoice.title}</h4>
                         {getInvoiceStatusBadge(invoice.status)}
                       </div>
@@ -1130,14 +1164,14 @@ const ProjectDetails = () => {
                       <button
                         className="action-btn edit"
                         onClick={() => handleOpenInvoiceModal(invoice)}
-                        title="Modifier"
+                        aria-label="Modifier"
                       >
                         <Edit2 size={18} />
                       </button>
                       <button
                         className="action-btn delete"
                         onClick={() => handleDeleteInvoice(invoice.id)}
-                        title="Supprimer"
+                        aria-label="Supprimer"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -1149,14 +1183,125 @@ const ProjectDetails = () => {
           </div>
         )}
 
-        {activeTab === 'tags' && (
-          <div className="tags-tab">
+        {activeSection === 'time' && (
+          <div className="time-section">
+            <div className="section-header">
+              <h2>Suivi du temps</h2>
+              <span className="section-count">{timeStats.total_hours}h au total</span>
+            </div>
+
+            {!detailedTimeStats ? (
+              <div className="loading-stats">
+                <div className="spinner" />
+                <p>Chargement des statistiques...</p>
+              </div>
+            ) : (
+              <>
+                <div className="time-summary">
+                  <div className="summary-card">
+                    <div className="summary-label">Temps total</div>
+                    <div className="summary-value">{detailedTimeStats.total_hours}h</div>
+                  </div>
+                  <div className="summary-card">
+                    <div className="summary-label">Estimation totale</div>
+                    <div className="summary-value">{detailedTimeStats.total_estimated}h</div>
+                  </div>
+                  <div className="summary-card">
+                    <div className="summary-label">Écart</div>
+                    <div className={`summary-value ${parseFloat(detailedTimeStats.variance) > 0 ? 'over' : 'under'}`}>
+                      {parseFloat(detailedTimeStats.variance) > 0 ? '+' : ''}{detailedTimeStats.variance}h
+                    </div>
+                  </div>
+                </div>
+
+                <div className="time-by-task">
+                  <h3>Temps par tâche</h3>
+                  {detailedTimeStats.tasks && detailedTimeStats.tasks.length > 0 ? (
+                    <div className="tasks-time-list">
+                      {detailedTimeStats.tasks.map((task) => (
+                        <div key={task.id} className="task-time-item">
+                          <div className="task-time-header">
+                            <h4>{task.title}</h4>
+                            <span className="task-time-total">{task.actual_hours}h</span>
+                          </div>
+                          <div className="task-time-details">
+                            <div className="time-detail">
+                              <span className="detail-label">Estimé:</span>
+                              <span className="detail-value">{task.estimated_hours}h</span>
+                            </div>
+                            <div className="time-detail">
+                              <span className="detail-label">Sessions:</span>
+                              <span className="detail-value">{task.entry_count}</span>
+                            </div>
+                            {task.variance && (
+                              <div className="time-detail">
+                                <span className="detail-label">Écart:</span>
+                                <span className={`detail-value ${parseFloat(task.variance) > 0 ? 'over' : 'under'}`}>
+                                  {parseFloat(task.variance) > 0 ? '+' : ''}{task.variance}h
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="task-time-bar">
+                            <div
+                              className="time-bar-fill"
+                              style={{
+                                width: `${Math.min((parseFloat(task.actual_hours) / Math.max(parseFloat(task.estimated_hours), parseFloat(task.actual_hours))) * 100, 100)}%`
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="no-data">Aucune session de temps enregistrée pour ce projet.</p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {activeSection === 'tags' && (
+          <div className="tags-section">
+            <div className="section-header">
+              <h2>Tags du projet</h2>
+            </div>
             <TagManager projectId={id} />
           </div>
         )}
       </div>
 
-      {/* Modal Facture Annexe */}
+      {/* Modals */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Supprimer le projet"
+        footer={
+          <>
+            <button onClick={() => setShowDeleteModal(false)} className="btn btn-secondary">
+              Annuler
+            </button>
+            <button onClick={handleDelete} className="btn btn-danger">
+              <Trash2 size={18} />
+              Supprimer
+            </button>
+          </>
+        }
+      >
+        <div className="delete-modal-content">
+          <AlertTriangle size={48} color="var(--danger-color)" />
+          <div>
+            <p className="delete-title">
+              Êtes-vous sûr de vouloir supprimer ce projet ?
+            </p>
+            <p className="delete-description">
+              Cette action est irréversible. Toutes les tâches, notes, documents et factures associées seront également supprimés.
+            </p>
+          </div>
+        </div>
+      </Modal>
+
       <Modal
         isOpen={showInvoiceModal}
         onClose={() => { setShowInvoiceModal(false); setEditingInvoice(null); }}
@@ -1256,6 +1401,111 @@ const ProjectDetails = () => {
           />
         </div>
       </Modal>
+    </div>
+  );
+};
+
+// Composant pour les champs éditables
+const EditableField = ({
+  label,
+  name,
+  value,
+  originalValue,
+  icon,
+  editing,
+  onEdit,
+  onChange,
+  onSave,
+  onCancel,
+  type = 'text',
+  required = false,
+  options = [],
+  renderDisplay
+}) => {
+  const handleBlur = () => {
+    // Sauvegarder automatiquement lors de la perte de focus
+    onSave();
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && type !== 'textarea') {
+      e.preventDefault();
+      onSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    }
+  };
+
+  return (
+    <div className="info-item">
+      <div className="info-label">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="info-value">
+        {editing ? (
+          <div className="inline-edit-wrapper">
+            {type === 'textarea' ? (
+              <textarea
+                name={name}
+                value={value}
+                onChange={onChange}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+                rows="3"
+                autoFocus
+                required={required}
+              />
+            ) : type === 'select' ? (
+              <select
+                name={name}
+                value={value}
+                onChange={(e) => {
+                  onChange(e);
+                  // Pour les selects, sauvegarder immédiatement après le changement
+                  setTimeout(() => onSave(), 0);
+                }}
+                onBlur={handleBlur}
+                autoFocus
+                required={required}
+              >
+                {options.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type={type}
+                name={name}
+                value={value}
+                onChange={onChange}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+                autoFocus
+                required={required}
+                step={type === 'number' ? '0.01' : undefined}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="view-field-wrapper" onClick={onEdit}>
+            <div className="view-value">
+              {renderDisplay ? renderDisplay() : (originalValue || '-')}
+            </div>
+            <button
+              className="btn-edit-field"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              aria-label={`Modifier ${label}`}
+            >
+              <Edit2 size={14} />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

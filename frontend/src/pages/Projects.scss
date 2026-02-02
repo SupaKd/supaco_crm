@@ -57,7 +57,7 @@
   background-color: var(--bg-elevated);
   padding: 12px 16px;
   border: 2px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: 30px;
   transition: $transition;
 
   &:focus-within {
@@ -570,5 +570,148 @@
         }
       }
     }
+  }
+
+  // Bulk Actions Bar
+  .bulk-actions-bar {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #0077b6 0%, #00a8e8 100%);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    animation: slideDown 0.3s ease;
+
+    @media (max-width: $mobile) {
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .bulk-actions-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
+      font-size: 15px;
+
+      svg {
+        flex-shrink: 0;
+      }
+    }
+
+    .bulk-actions-buttons {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      @media (max-width: $mobile) {
+        width: 100%;
+        flex-direction: column;
+      }
+
+      .bulk-status-select {
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 2px solid white;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: $transition;
+
+        @media (max-width: $mobile) {
+          width: 100%;
+        }
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        option {
+          color: var(--text-primary);
+          background: var(--card-bg);
+        }
+      }
+
+      .bulk-action-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 2px solid white;
+        background: transparent;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: $transition;
+
+        @media (max-width: $mobile) {
+          width: 100%;
+          justify-content: center;
+        }
+
+        &:hover {
+          background: white;
+        }
+
+        &.tag:hover {
+          color: $primary-color;
+        }
+
+        &.delete:hover {
+          color: $danger-color;
+        }
+
+        &.cancel:hover {
+          color: var(--text-secondary);
+        }
+      }
+    }
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // Checkbox Column
+  .checkbox-column {
+    width: 50px;
+    text-align: center;
+    padding: 12px 8px !important;
+
+    .checkbox-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: $transition;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        color: $primary-color;
+        transform: scale(1.1);
+      }
+    }
+  }
+
+  // Selected Row
+  .clickable-row.selected {
+    background: rgba($primary-color, 0.08);
+    border-left: 3px solid $primary-color;
   }
 }
