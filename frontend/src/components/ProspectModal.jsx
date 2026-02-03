@@ -11,12 +11,23 @@ const INTERACTION_TYPES = [
   { id: 'note', label: 'Note', icon: FileText }
 ];
 
+const STATUS_OPTIONS = [
+  { value: 'nouveau', label: 'Nouveau' },
+  { value: 'contacte', label: 'Contacté' },
+  { value: 'qualification', label: 'Qualification' },
+  { value: 'proposition', label: 'Proposition' },
+  { value: 'negociation', label: 'Négociation' },
+  { value: 'gagne', label: 'Gagné' },
+  { value: 'perdu', label: 'Perdu' }
+];
+
 const ProspectModal = ({ prospect, onClose, onSave }) => {
   const [activeTab, setActiveTab] = useState('infos');
   const [saving, setSaving] = useState(false);
   const [interactions, setInteractions] = useState([]);
   const [loadingInteractions, setLoadingInteractions] = useState(false);
   const [newInteraction, setNewInteraction] = useState({ type: 'note', content: '' });
+  const [status, setStatus] = useState(prospect?.status || 'nouveau');
 
   const [formData, setFormData] = useState({
     first_name: '',
@@ -43,6 +54,7 @@ const ProspectModal = ({ prospect, onClose, onSave }) => {
         needs: prospect.needs || '',
         notes: prospect.notes || ''
       });
+      setStatus(prospect.status || 'nouveau');
       fetchInteractions();
     }
   }, [prospect]);
@@ -75,6 +87,10 @@ const ProspectModal = ({ prospect, onClose, onSave }) => {
 
     setSaving(true);
     try {
+      // Si le statut a changé, utiliser l'endpoint dédié
+      if (prospect && status !== prospect.status) {
+        await prospectsAPI.updateStatus(prospect.id, status);
+      }
       await onSave({
         ...formData,
         estimated_budget: formData.estimated_budget ? parseFloat(formData.estimated_budget) : null
@@ -202,6 +218,17 @@ const ProspectModal = ({ prospect, onClose, onSave }) => {
                 </select>
               </div>
             </div>
+
+            {prospect && (
+              <div className="form-group">
+                <label>Statut</label>
+                <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                  {STATUS_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="form-group">
               <label>Budget estimé (€)</label>

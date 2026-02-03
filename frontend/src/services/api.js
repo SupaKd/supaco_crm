@@ -132,6 +132,16 @@ export const invoicesAPI = {
   delete: (id) => api.delete(`/invoices/${id}`)
 };
 
+// Paiements (échéances)
+export const paymentsAPI = {
+  getByProject: (projectId) => api.get(`/payments/project/${projectId}`),
+  getSummary: (projectId) => api.get(`/payments/project/${projectId}/summary`),
+  create: (data) => api.post('/payments', data),
+  update: (id, data) => api.put(`/payments/${id}`, data),
+  toggleStatus: (id) => api.patch(`/payments/${id}/toggle`),
+  delete: (id) => api.delete(`/payments/${id}`)
+};
+
 // Assistant IA
 export const aiAPI = {
   chat: (message, conversationHistory = []) => api.post('/ai/chat', { message, conversationHistory }),

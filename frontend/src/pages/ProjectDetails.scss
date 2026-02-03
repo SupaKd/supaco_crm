@@ -204,6 +204,16 @@
           color: white;
         }
       }
+
+      &.nav-item-danger {
+        margin-left: auto;
+        color: $danger-color;
+
+        &:hover {
+          background: rgba($danger-color, 0.1);
+          color: $danger-color;
+        }
+      }
     }
   }
 
@@ -1310,6 +1320,231 @@
         }
       }
     }
+  }
+
+  // Finances Section (merged payments + invoices)
+  .finances-section {
+    .finances-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+
+      .summary-card {
+        padding: 1rem;
+        background: var(--hover-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        text-align: center;
+
+        &.total {
+          border-color: $primary-color;
+          background: rgba($primary-color, 0.05);
+        }
+
+        &.success {
+          border-color: $success-color;
+          background: rgba($success-color, 0.05);
+        }
+
+        &.warning {
+          border-color: $warning-color;
+          background: rgba($warning-color, 0.05);
+        }
+
+        &.info {
+          border-color: #8b5cf6;
+          background: rgba(#8b5cf6, 0.05);
+        }
+
+        .summary-label {
+          display: block;
+          font-size: 0.875rem;
+          color: var(--text-secondary);
+          margin-bottom: 0.5rem;
+        }
+
+        .summary-value {
+          display: block;
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: var(--text-primary);
+        }
+      }
+    }
+
+    .finance-subsection {
+      margin-bottom: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+
+      &:first-of-type {
+        border-top: none;
+        padding-top: 0;
+      }
+    }
+
+    .payment-progress-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+
+      .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+
+        .progress-label {
+          font-size: 0.9375rem;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+
+        .progress-percentage {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: $success-color;
+        }
+      }
+
+      .progress-bar-wrapper {
+        width: 100%;
+        height: 12px;
+        background: var(--hover-bg);
+        border-radius: 6px;
+        overflow: hidden;
+        margin-bottom: 0.75rem;
+
+        .progress-bar-fill {
+          height: 100%;
+          background: linear-gradient(90deg, $primary-color, $success-color);
+          border-radius: 6px;
+          transition: width 0.5s ease;
+          min-width: 0;
+        }
+      }
+
+      .progress-amounts {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+    }
+
+    .payment-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--hover-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      transition: $transition;
+
+      &:hover {
+        box-shadow: var(--shadow-sm);
+        border-color: $primary-color;
+      }
+
+      &.paid {
+        opacity: 0.75;
+
+        .payment-info h4 {
+          text-decoration: line-through;
+          color: var(--text-secondary);
+        }
+
+        .payment-amount .amount {
+          color: var(--text-secondary);
+        }
+      }
+
+      .payment-toggle {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-secondary);
+        padding: 0;
+        display: flex;
+        align-items: center;
+        transition: $transition;
+        flex-shrink: 0;
+
+        &:hover {
+          color: $success-color;
+          transform: scale(1.1);
+        }
+      }
+
+      &.paid .payment-toggle {
+        color: $success-color;
+      }
+
+      .payment-info {
+        flex: 1;
+        min-width: 0;
+
+        .payment-header-info {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          margin-bottom: 0.25rem;
+
+          h4 {
+            margin: 0;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: var(--text-primary);
+          }
+        }
+
+        .payment-meta {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          flex-wrap: wrap;
+          font-size: 0.8125rem;
+          color: var(--text-secondary);
+
+          .payment-due,
+          .payment-paid-date {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+          }
+
+          .payment-paid-date {
+            color: $success-color;
+          }
+        }
+      }
+
+      .payment-amount {
+        .amount {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: $success-color;
+          white-space: nowrap;
+        }
+      }
+
+      .payment-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+    }
+  }
+
+  // Stat sub label
+  .stat-sub {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: $success-color;
   }
 
   @keyframes slideDown {

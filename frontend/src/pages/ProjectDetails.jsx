@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { projectsAPI, tasksAPI, notesAPI, attachmentsAPI, invoicesAPI, timeTrackingAPI } from '../services/api';
+import { projectsAPI, tasksAPI, notesAPI, attachmentsAPI, invoicesAPI, timeTrackingAPI, paymentsAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import Modal from '../components/Modal';
 import Loader from '../components/Loader';
 import TagManager from '../components/TagManager';
 import TaskTimer from '../components/TaskTimer';
 import {
-  ArrowLeft,
-  Save,
   Trash2,
   Plus,
   CheckCircle2,
@@ -48,6 +46,16 @@ const ProjectDetails = () => {
   const [attachments, setAttachments] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [invoicesTotal, setInvoicesTotal] = useState({ count: 0, total: 0, paid: 0, pending: 0 });
+  const [payments, setPayments] = useState([]);
+  const [paymentsSummary, setPaymentsSummary] = useState({ count: 0, total: 0, paid: 0, pending: 0 });
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [paymentForm, setPaymentForm] = useState({
+    label: '',
+    amount: '',
+    due_date: '',
+    status: 'en_attente'
+  });
   const [timeStats, setTimeStats] = useState({ total_seconds: 0, total_hours: '0.00' });
   const [detailedTimeStats, setDetailedTimeStats] = useState(null);
 
@@ -126,6 +134,18 @@ const ProjectDetails = () => {
       }
 
       try {
+        const [paymentsRes, paymentsSummaryRes] = await Promise.all([
+          paymentsAPI.getByProject(id),
+          paymentsAPI.getSummary(id)
+        ]);
+        setPayments(paymentsRes.data);
+        setPaymentsSummary(paymentsSummaryRes.data);
+      } catch {
+        setPayments([]);
+        setPaymentsSummary({ count: 0, total: 0, paid: 0, pending: 0 });
+      }
+
+      try {
         const timeRes = await timeTrackingAPI.getByProject(id);
         setTimeStats({
           total_seconds: timeRes.data.total_seconds || 0,
@@ -179,18 +199,22 @@ const ProjectDetails = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveField = async (fieldName) => {
+  const handleSaveField = async (fieldName, overrideValue) => {
     try {
       setSaving(true);
 
+      const dataToSave = overrideValue !== undefined
+        ? { ...formData, [fieldName]: overrideValue }
+        : formData;
+
       const projectData = {
-        ...formData,
-        budget: formData.budget ? parseFloat(formData.budget) : null,
-        deadline: formData.deadline || null,
-        client_email: formData.client_email || null,
-        client_phone: formData.client_phone || null,
-        website_url: formData.website_url || null,
-        description: formData.description || null
+        ...dataToSave,
+        budget: dataToSave.budget ? parseFloat(dataToSave.budget) : null,
+        deadline: dataToSave.deadline || null,
+        client_email: dataToSave.client_email || null,
+        client_phone: dataToSave.client_phone || null,
+        website_url: dataToSave.website_url || null,
+        description: dataToSave.description || null
       };
 
       await projectsAPI.update(id, projectData);
@@ -456,6 +480,75 @@ const ProjectDetails = () => {
     }
   };
 
+  // Paiements (échéances)
+  const handleOpenPaymentModal = (payment = null) => {
+    if (payment) {
+      setEditingPayment(payment);
+      setPaymentForm({
+        label: payment.label || '',
+        amount: payment.amount || '',
+        due_date: payment.due_date ? payment.due_date.split('T')[0] : '',
+        status: payment.status || 'en_attente'
+      });
+    } else {
+      setEditingPayment(null);
+      setPaymentForm({
+        label: '',
+        amount: '',
+        due_date: '',
+        status: 'en_attente'
+      });
+    }
+    setShowPaymentModal(true);
+  };
+
+  const handleSavePayment = async () => {
+    if (!paymentForm.label.trim() || !paymentForm.amount) {
+      toast.error('Le libellé et le montant sont requis');
+      return;
+    }
+
+    try {
+      if (editingPayment) {
+        await paymentsAPI.update(editingPayment.id, paymentForm);
+        toast.success('Échéance mise à jour');
+      } else {
+        await paymentsAPI.create({ ...paymentForm, project_id: id });
+        toast.success('Échéance ajoutée');
+      }
+      setShowPaymentModal(false);
+      setEditingPayment(null);
+      await fetchProjectData();
+    } catch (err) {
+      console.error('Erreur sauvegarde paiement:', err);
+      toast.error('Erreur lors de la sauvegarde');
+    }
+  };
+
+  const handleTogglePayment = async (paymentId) => {
+    try {
+      await paymentsAPI.toggleStatus(paymentId);
+      await fetchProjectData();
+      toast.success('Statut mis à jour');
+    } catch (err) {
+      console.error('Erreur toggle paiement:', err);
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleDeletePayment = async (paymentId) => {
+    if (!confirm('Supprimer cette échéance ?')) return;
+
+    try {
+      await paymentsAPI.delete(paymentId);
+      toast.success('Échéance supprimée');
+      await fetchProjectData();
+    } catch (err) {
+      console.error('Erreur suppression paiement:', err);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
   // Utilitaires
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 B';
@@ -533,29 +626,12 @@ const ProjectDetails = () => {
     <div className="project-details-page">
       {/* Header with breadcrumb */}
       <div className="page-header-wrapper">
-        <button
-          onClick={() => navigate('/projects')}
-          className="back-button"
-          aria-label="Retour aux projets"
-        >
-          <ArrowLeft size={20} />
-          <span>Projets</span>
-        </button>
+       
 
         <div className="project-header">
           <div className="project-title-section">
             <h1 className="project-title">{project.name}</h1>
             {getStatusBadge(project.status)}
-          </div>
-          <div className="project-actions">
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              className="btn btn-outline-danger"
-              aria-label="Supprimer le projet"
-            >
-              <Trash2 size={18} />
-              Supprimer
-            </button>
           </div>
         </div>
       </div>
@@ -569,6 +645,11 @@ const ProjectDetails = () => {
           <div className="stat-content">
             <span className="stat-label">Budget</span>
             <span className="stat-value">{project.budget ? `${project.budget}€` : '-'}</span>
+            {project.budget > 0 && paymentsSummary.paid > 0 && (
+              <span className="stat-sub">
+                {Math.round((parseFloat(paymentsSummary.paid) / parseFloat(project.budget)) * 100)}% payé
+              </span>
+            )}
           </div>
         </div>
 
@@ -604,17 +685,6 @@ const ProjectDetails = () => {
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon invoices">
-            <Receipt size={24} />
-          </div>
-          <div className="stat-content">
-            <span className="stat-label">Factures</span>
-            <span className="stat-value">
-              {invoicesTotal.paid ? `${parseFloat(invoicesTotal.paid).toFixed(0)}€` : '0€'} / {invoicesTotal.total ? `${parseFloat(invoicesTotal.total).toFixed(0)}€` : '0€'}
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Navigation */}
@@ -625,6 +695,14 @@ const ProjectDetails = () => {
         >
           <FileText size={18} />
           <span>Vue d'ensemble</span>
+        </button>
+        <button
+          className={`nav-item ${activeSection === 'finances' ? 'active' : ''}`}
+          onClick={() => setActiveSection('finances')}
+        >
+          <Euro size={18} />
+          <span>Finances</span>
+          {(payments.length > 0 || invoices.length > 0) && <span className="nav-badge">{payments.length + invoices.length}</span>}
         </button>
         <button
           className={`nav-item ${activeSection === 'tasks' ? 'active' : ''}`}
@@ -651,14 +729,6 @@ const ProjectDetails = () => {
           <span className="nav-badge">{attachments.length}</span>
         </button>
         <button
-          className={`nav-item ${activeSection === 'invoices' ? 'active' : ''}`}
-          onClick={() => setActiveSection('invoices')}
-        >
-          <Receipt size={18} />
-          <span>Factures</span>
-          <span className="nav-badge">{invoices.length}</span>
-        </button>
-        <button
           className={`nav-item ${activeSection === 'time' ? 'active' : ''}`}
           onClick={() => setActiveSection('time')}
         >
@@ -671,6 +741,14 @@ const ProjectDetails = () => {
         >
           <LinkIcon size={18} />
           <span>Tags</span>
+        </button>
+        <button
+          className="nav-item nav-item-danger"
+          onClick={() => setShowDeleteModal(true)}
+          aria-label="Supprimer le projet"
+        >
+          <Trash2 size={18} />
+          <span>Supprimer</span>
         </button>
       </nav>
 
@@ -720,7 +798,7 @@ const ProjectDetails = () => {
                     editing={editingField === 'status'}
                     onEdit={() => setEditingField('status')}
                     onChange={handleChange}
-                    onSave={() => handleSaveField('status')}
+                    onSave={(newValue) => handleSaveField('status', newValue)}
                     onCancel={() => handleCancelEdit('status')}
                     type="select"
                     options={[
@@ -844,6 +922,183 @@ const ProjectDetails = () => {
                     ) : '-'}
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'finances' && (
+          <div className="finances-section">
+            {/* Barre de progression */}
+            {project.budget > 0 && (
+              <div className="payment-progress-card">
+                <div className="progress-header">
+                  <span className="progress-label">Progression des paiements</span>
+                  <span className="progress-percentage">
+                    {paymentsSummary.paid > 0
+                      ? `${Math.round((parseFloat(paymentsSummary.paid) / parseFloat(project.budget)) * 100)}%`
+                      : '0%'}
+                  </span>
+                </div>
+                <div className="progress-bar-wrapper">
+                  <div
+                    className="progress-bar-fill"
+                    style={{
+                      width: `${Math.min((parseFloat(paymentsSummary.paid) / parseFloat(project.budget)) * 100, 100)}%`
+                    }}
+                  />
+                </div>
+                <div className="progress-amounts">
+                  <span>{parseFloat(paymentsSummary.paid).toFixed(0)}€ payé</span>
+                  <span>sur {parseFloat(project.budget).toFixed(0)}€</span>
+                </div>
+              </div>
+            )}
+
+            
+
+            {/* Sous-section : Échéances de paiement */}
+            <div className="finance-subsection">
+              <div className="section-header">
+                <h2>Échéances de paiement</h2>
+                <button onClick={() => handleOpenPaymentModal()} className="btn btn-primary">
+                  <Plus size={18} />
+                  Nouvelle échéance
+                </button>
+              </div>
+
+              <div className="items-list">
+                {payments.length === 0 ? (
+                  <div className="empty-state">
+                    <Euro size={48} />
+                    <p>Aucune échéance de paiement</p>
+                    <span>Ajoutez des échéances pour suivre les paiements en plusieurs fois</span>
+                  </div>
+                ) : (
+                  payments.map((payment) => (
+                    <div key={payment.id} className={`payment-item ${payment.status === 'payee' ? 'paid' : ''}`}>
+                      <button
+                        className="payment-toggle"
+                        onClick={() => handleTogglePayment(payment.id)}
+                        aria-label={payment.status === 'payee' ? 'Marquer comme non payé' : 'Marquer comme payé'}
+                      >
+                        {payment.status === 'payee' ? <CheckCircle2 size={22} /> : <Circle size={22} />}
+                      </button>
+                      <div className="payment-info">
+                        <div className="payment-header-info">
+                          <h4>{payment.label}</h4>
+                          <span className={`badge badge-${payment.status === 'payee' ? 'termine' : 'a_faire'}`}>
+                            {payment.status === 'payee' ? 'Payé' : 'En attente'}
+                          </span>
+                        </div>
+                        <div className="payment-meta">
+                          {payment.due_date && (
+                            <span className="payment-due">
+                              <Calendar size={14} />
+                              Échéance : {new Date(payment.due_date).toLocaleDateString('fr-FR')}
+                            </span>
+                          )}
+                          {payment.paid_at && (
+                            <span className="payment-paid-date">
+                              <CheckCircle2 size={14} />
+                              Payé le {new Date(payment.paid_at).toLocaleDateString('fr-FR')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="payment-amount">
+                        <span className="amount">{parseFloat(payment.amount).toFixed(2)}€</span>
+                      </div>
+                      <div className="payment-actions">
+                        <button
+                          className="action-btn edit"
+                          onClick={() => handleOpenPaymentModal(payment)}
+                          aria-label="Modifier"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          className="action-btn delete"
+                          onClick={() => handleDeletePayment(payment.id)}
+                          aria-label="Supprimer"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Sous-section : Factures annexes */}
+            <div className="finance-subsection">
+              <div className="section-header">
+                <h2>Factures annexes</h2>
+                <button onClick={() => handleOpenInvoiceModal()} className="btn btn-primary">
+                  <Plus size={18} />
+                  Nouvelle facture
+                </button>
+              </div>
+
+              <div className="items-list">
+                {invoices.length === 0 ? (
+                  <div className="empty-state">
+                    <Receipt size={48} />
+                    <p>Aucune facture annexe</p>
+                    <span>Ajoutez des factures pour les modifications, maintenances, etc.</span>
+                  </div>
+                ) : (
+                  invoices.map((invoice) => (
+                    <div key={invoice.id} className="invoice-item">
+                      <div className="invoice-icon">
+                        <Receipt size={24} />
+                      </div>
+                      <div className="invoice-info">
+                        <div className="invoice-header-info">
+                          <h4>{invoice.title}</h4>
+                          {getInvoiceStatusBadge(invoice.status)}
+                        </div>
+                        {invoice.invoice_number && (
+                          <span className="invoice-number">N° {invoice.invoice_number}</span>
+                        )}
+                        {invoice.description && (
+                          <p className="invoice-description">{invoice.description}</p>
+                        )}
+                        <div className="invoice-meta">
+                          <span className="invoice-category">{getInvoiceCategoryLabel(invoice.category)}</span>
+                          <span className="invoice-date">
+                            {new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}
+                          </span>
+                          {invoice.due_date && (
+                            <span className="invoice-due">
+                              Échéance: {new Date(invoice.due_date).toLocaleDateString('fr-FR')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="invoice-amount">
+                        <span className="amount">{parseFloat(invoice.amount).toFixed(2)}€</span>
+                      </div>
+                      <div className="invoice-actions">
+                        <button
+                          className="action-btn edit"
+                          onClick={() => handleOpenInvoiceModal(invoice)}
+                          aria-label="Modifier"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          className="action-btn delete"
+                          onClick={() => handleDeleteInvoice(invoice.id)}
+                          aria-label="Supprimer"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -1096,93 +1351,6 @@ const ProjectDetails = () => {
           </div>
         )}
 
-        {activeSection === 'invoices' && (
-          <div className="invoices-section">
-            <div className="section-header">
-              <h2>Factures annexes</h2>
-              <button onClick={() => handleOpenInvoiceModal()} className="btn btn-primary">
-                <Plus size={18} />
-                Nouvelle facture
-              </button>
-            </div>
-
-            <div className="invoices-summary">
-              <div className="summary-card total">
-                <span className="summary-label">Total</span>
-                <span className="summary-value">{invoicesTotal.total ? `${parseFloat(invoicesTotal.total).toFixed(2)}€` : '0€'}</span>
-              </div>
-              <div className="summary-card success">
-                <span className="summary-label">Payé</span>
-                <span className="summary-value">{invoicesTotal.paid ? `${parseFloat(invoicesTotal.paid).toFixed(2)}€` : '0€'}</span>
-              </div>
-              <div className="summary-card warning">
-                <span className="summary-label">En attente</span>
-                <span className="summary-value">{invoicesTotal.pending ? `${parseFloat(invoicesTotal.pending).toFixed(2)}€` : '0€'}</span>
-              </div>
-            </div>
-
-            <div className="items-list">
-              {invoices.length === 0 ? (
-                <div className="empty-state">
-                  <Receipt size={48} />
-                  <p>Aucune facture annexe</p>
-                  <span>Ajoutez des factures pour les modifications, maintenances, etc.</span>
-                </div>
-              ) : (
-                invoices.map((invoice) => (
-                  <div key={invoice.id} className="invoice-item">
-                    <div className="invoice-icon">
-                      <Receipt size={24} />
-                    </div>
-                    <div className="invoice-info">
-                      <div className="invoice-header-info">
-                        <h4>{invoice.title}</h4>
-                        {getInvoiceStatusBadge(invoice.status)}
-                      </div>
-                      {invoice.invoice_number && (
-                        <span className="invoice-number">N° {invoice.invoice_number}</span>
-                      )}
-                      {invoice.description && (
-                        <p className="invoice-description">{invoice.description}</p>
-                      )}
-                      <div className="invoice-meta">
-                        <span className="invoice-category">{getInvoiceCategoryLabel(invoice.category)}</span>
-                        <span className="invoice-date">
-                          {new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}
-                        </span>
-                        {invoice.due_date && (
-                          <span className="invoice-due">
-                            Échéance: {new Date(invoice.due_date).toLocaleDateString('fr-FR')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="invoice-amount">
-                      <span className="amount">{parseFloat(invoice.amount).toFixed(2)}€</span>
-                    </div>
-                    <div className="invoice-actions">
-                      <button
-                        className="action-btn edit"
-                        onClick={() => handleOpenInvoiceModal(invoice)}
-                        aria-label="Modifier"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button
-                        className="action-btn delete"
-                        onClick={() => handleDeleteInvoice(invoice.id)}
-                        aria-label="Supprimer"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
         {activeSection === 'time' && (
           <div className="time-section">
             <div className="section-header">
@@ -1401,6 +1569,61 @@ const ProjectDetails = () => {
           />
         </div>
       </Modal>
+      <Modal
+        isOpen={showPaymentModal}
+        onClose={() => { setShowPaymentModal(false); setEditingPayment(null); }}
+        title={editingPayment ? 'Modifier l\'échéance' : 'Ajouter une échéance de paiement'}
+        footer={
+          <>
+            <button onClick={() => setShowPaymentModal(false)} className="btn btn-secondary">
+              Annuler
+            </button>
+            <button onClick={handleSavePayment} className="btn btn-primary">
+              {editingPayment ? 'Mettre à jour' : 'Ajouter'}
+            </button>
+          </>
+        }
+      >
+        <div className="form-group">
+          <label>Libellé *</label>
+          <input
+            type="text"
+            value={paymentForm.label}
+            onChange={(e) => setPaymentForm({ ...paymentForm, label: e.target.value })}
+            placeholder="Ex: Acompte, 2ème versement, Solde..."
+          />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Montant *</label>
+            <input
+              type="number"
+              step="0.01"
+              value={paymentForm.amount}
+              onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+              placeholder="0.00"
+            />
+          </div>
+          <div className="form-group">
+            <label>Date d'échéance</label>
+            <input
+              type="date"
+              value={paymentForm.due_date}
+              onChange={(e) => setPaymentForm({ ...paymentForm, due_date: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="form-group">
+          <label>Statut</label>
+          <select
+            value={paymentForm.status}
+            onChange={(e) => setPaymentForm({ ...paymentForm, status: e.target.value })}
+          >
+            <option value="en_attente">En attente</option>
+            <option value="payee">Payé</option>
+          </select>
+        </div>
+      </Modal>
     </div>
   );
 };
@@ -1424,7 +1647,9 @@ const EditableField = ({
 }) => {
   const handleBlur = () => {
     // Sauvegarder automatiquement lors de la perte de focus
-    onSave();
+    if (type !== 'select') {
+      onSave();
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -1462,11 +1687,10 @@ const EditableField = ({
                 name={name}
                 value={value}
                 onChange={(e) => {
+                  const newValue = e.target.value;
                   onChange(e);
-                  // Pour les selects, sauvegarder immédiatement après le changement
-                  setTimeout(() => onSave(), 0);
+                  onSave(newValue);
                 }}
-                onBlur={handleBlur}
                 autoFocus
                 required={required}
               >

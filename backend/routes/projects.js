@@ -48,7 +48,7 @@ router.get('/', async (req, res) => {
       [...params, limit, offset]
     );
 
-    // Récupérer les tags pour chaque projet
+    // Récupérer les tags et résumé paiements pour chaque projet
     const projectsWithTags = await Promise.all(
       projects.map(async (project) => {
         const [tags] = await db.query(
@@ -58,7 +58,20 @@ router.get('/', async (req, res) => {
            WHERE pt.project_id = ?`,
           [project.id]
         );
-        return { ...project, tags };
+        const [paymentSummary] = await db.query(
+          `SELECT
+             COALESCE(SUM(amount), 0) as payments_total,
+             COALESCE(SUM(CASE WHEN status = 'payee' THEN amount ELSE 0 END), 0) as payments_paid
+           FROM project_payments
+           WHERE project_id = ?`,
+          [project.id]
+        );
+        return {
+          ...project,
+          tags,
+          payments_total: paymentSummary[0].payments_total,
+          payments_paid: paymentSummary[0].payments_paid
+        };
       })
     );
 

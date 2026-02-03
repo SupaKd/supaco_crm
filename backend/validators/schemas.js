@@ -100,6 +100,22 @@ const invoiceSchema = Joi.object({
   category: Joi.string().valid('modification', 'maintenance', 'hebergement', 'formation', 'autre').default('autre')
 });
 
+// Paiements (échéances)
+const paymentSchema = Joi.object({
+  project_id: Joi.number().integer().positive().required().messages({
+    'any.required': 'L\'ID du projet est requis'
+  }),
+  label: Joi.string().min(1).max(255).required().messages({
+    'any.required': 'Le libellé est requis'
+  }),
+  amount: Joi.number().positive().required().messages({
+    'number.positive': 'Le montant doit être positif',
+    'any.required': 'Le montant est requis'
+  }),
+  due_date: Joi.date().allow(null, ''),
+  status: Joi.string().valid('en_attente', 'payee').default('en_attente')
+});
+
 // Tâches
 const taskSchema = Joi.object({
   project_id: Joi.number().integer().positive().required(),
@@ -175,6 +191,7 @@ module.exports = {
   prospectSchema,
   prospectStatusSchema,
   invoiceSchema,
+  paymentSchema,
   taskSchema,
   noteSchema,
   tagSchema,
